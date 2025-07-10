@@ -1,0 +1,6 @@
+Contains critical API keys (TMDB, Gemini), base URLs for APIs, image CDNs, and other important global constants used throughout the mobile application. Vital for understanding external API interactions, data sources, and fixed application-wide values.
+[constants.ts](mdc:src/utils/constants.ts)
+description:
+globs:
+alwaysApply: false
+---

@@ -1,0 +1,13 @@
+Provides context for mobile-specific UI components, React Native styling, loading states, error handling, and common mobile UI patterns. Includes components like loading spinners, error messages, and mobile-optimized layouts.
+Helpful for general mobile UI consistency questions or when working with shared visual elements and mobile-specific interactions.
+[LoadingSpinner.tsx](mdc:src/components/LoadingSpinner.tsx)
+
+[ErrorMessage.tsx](mdc:src/components/ErrorMessage.tsx)
+
+[MovieSkeleton.tsx](mdc:src/components/MovieSkeleton.tsx)
+
+[ErrorBoundary.tsx](mdc:src/components/ErrorBoundary.tsx)
+description:
+globs:
+alwaysApply: false
+---

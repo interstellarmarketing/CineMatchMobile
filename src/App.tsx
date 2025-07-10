@@ -6,25 +6,22 @@ import { store, persistor } from './src/utils/store';
 import AppNavigator from './src/navigation/AppNavigator';
 import AuthProvider from './src/components/AuthProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import ErrorBoundary from './src/components/ErrorBoundary';
 // import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 const queryClient = new QueryClient();
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        {/* <ReactQueryDevtools initialIsOpen={false} /> */}
-        <Provider store={store}>
-          <PersistGate loading={null} persistor={persistor}>
-            <AuthProvider>
-              <AppNavigator />
-              <StatusBar style="light" />
-            </AuthProvider>
-          </PersistGate>
-        </Provider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      {/* <ReactQueryDevtools initialIsOpen={false} /> */}
+      <Provider store={store}>
+        <PersistGate loading={null} persistor={persistor}>
+          <AuthProvider>
+            <AppNavigator />
+            <StatusBar style="light" />
+          </AuthProvider>
+        </PersistGate>
+      </Provider>
+    </QueryClientProvider>
   );
-}
+} 

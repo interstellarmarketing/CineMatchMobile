@@ -1,0 +1,15 @@
+Covers development tools, testing setup, linting configuration, and build tools specific to React Native and Expo development. Includes ESLint, Prettier, Jest testing, and development workflow configurations.
+Helpful for understanding development workflow, code quality tools, testing strategies, and build processes for the mobile application.
+[.eslintrc.json](mdc:.eslintrc.json)
+
+[.prettierrc](mdc:.prettierrc)
+
+[jest.config.js](mdc:jest.config.js)
+
+[tsconfig.json](mdc:tsconfig.json)
+
+[app.json](mdc:app.json)
+description:
+globs:
+alwaysApply: false
+---

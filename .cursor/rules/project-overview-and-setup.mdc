@@ -1,0 +1,12 @@
+Provides general context about the CineMatch Mobile project, its purpose, main technologies (React Native, Expo, TypeScript, Redux Toolkit, Firebase, Gemini API, TMDB API), and setup. Useful for high-level questions, understanding the project architecture, and initial onboarding.
+[README.md](mdc:README.md)
+
+[package.json](mdc:package.json)
+
+[app.json](mdc:app.json)
+
+[tsconfig.json](mdc:tsconfig.json)
+description:
+globs:
+alwaysApply: false
+---

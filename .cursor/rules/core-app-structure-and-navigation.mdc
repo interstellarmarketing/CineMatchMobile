@@ -1,0 +1,14 @@
+Defines the main React Native application shell, root component rendering, React Navigation setup, and global providers. Essential for understanding how the app is initialized, how navigation works, and where global context originates.
+[App.tsx](mdc:src/App.tsx)
+
+[index.ts](mdc:index.ts)
+
+[AppNavigator.tsx](mdc:src/navigation/AppNavigator.tsx)
+
+[AuthProvider.tsx](mdc:src/components/AuthProvider.tsx)
+
+[ErrorBoundary.tsx](mdc:src/components/ErrorBoundary.tsx)
+description:
+globs:
+alwaysApply: false
+---

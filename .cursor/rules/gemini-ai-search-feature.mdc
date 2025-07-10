@@ -1,0 +1,13 @@
+Focuses on the AI-powered movie/TV recommendation feature using the Google Gemini API. Includes the main search screen, suggestion display, API call logic, and related Redux state. Features mobile-optimized UX with sticky header and scrollable content.
+Helpful for tasks related to improving AI search, handling Gemini API responses, or UI for search results on mobile.
+[GeminiSearchScreen.tsx](mdc:src/screens/GeminiSearchScreen.tsx)
+
+[GeminiMovieCard.tsx](mdc:src/components/GeminiMovieCard.tsx)
+
+[GeminiMovieSuggestions.tsx](mdc:src/components/GeminiMovieSuggestions.tsx)
+
+[geminiSlice.ts](mdc:src/utils/slices/geminiSlice.ts)
+description:
+globs:
+alwaysApply: false
+---

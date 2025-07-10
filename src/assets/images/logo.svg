@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="551.08" height="148" viewBox="0 0 551.08 148">
+  <defs>
+    <style>
+      .cls-1, .cls-2 {
+        fill: #d4af37;
+      }
+      .cls-3 {
+        fill: none;
+        stroke: #d4af37;
+        stroke-linecap: round;
+        stroke-width: 8px;
+      }
+      .cls-2 {
+        font-family: ArialMT, Arial;
+        font-size: 96px;
+        isolation: isolate;
+        letter-spacing: .04em;
+      }
+    </style>
+  </defs>
+  <g>
+    <path class="cls-3" d="M74,4C35.34,4,4,35.34,4,74s31.34,70,70,70"/>
+    <polygon class="cls-1" points="74 34 114 74 74 114 74 34"/>
+  </g>
+  <text class="cls-2" transform="translate(134 109)"><tspan x="0" y="0">ineMatch</tspan></text>
+</svg> 

@@ -1,0 +1,35 @@
+Handles fetching, displaying, and interacting with movie data: movie lists (popular, trending, top-rated, upcoming), individual movie details pages, trailers, and search functionality. Uses TMDB API with React Query for caching.
+Relevant for tasks like modifying movie screens, enhancing movie detail pages, or debugging movie data fetching.
+[HomeScreen.tsx](mdc:src/screens/HomeScreen.tsx)
+
+[BrowseScreen.tsx](mdc:src/screens/BrowseScreen.tsx)
+
+[SearchScreen.tsx](mdc:src/screens/SearchScreen.tsx)
+
+[MovieDetailsScreen.tsx](mdc:src/screens/MovieDetailsScreen.tsx)
+
+[MovieCard.tsx](mdc:src/components/MovieCard.tsx)
+
+[MovieList.tsx](mdc:src/components/MovieList.tsx)
+
+[MovieGrid.tsx](mdc:src/components/MovieGrid.tsx)
+
+[SearchBar.tsx](mdc:src/components/SearchBar.tsx)
+
+[usePopularMovies.ts](mdc:src/hooks/usePopularMovies.ts)
+
+[useTrendingMovies.ts](mdc:src/hooks/useTrendingMovies.ts)
+
+[useTopRatedMovies.ts](mdc:src/hooks/useTopRatedMovies.ts)
+
+[useUpcomingMovies.ts](mdc:src/hooks/useUpcomingMovies.ts)
+
+[useMovieDetails.ts](mdc:src/hooks/useMovieDetails.ts)
+
+[useMovieTrailer.ts](mdc:src/hooks/useMovieTrailer.ts)
+
+[useSearchMovies.ts](mdc:src/hooks/useSearchMovies.ts)
+description:
+globs:
+alwaysApply: false
+---

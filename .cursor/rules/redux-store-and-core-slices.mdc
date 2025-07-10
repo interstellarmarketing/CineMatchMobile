@@ -1,0 +1,16 @@
+Covers the Redux store configuration and the primary Redux Toolkit slices for managing global application state related to movies, user session, preferences, and AI search results.
+[store.ts](mdc:src/utils/store.ts)
+
+[moviesSlice.ts](mdc:src/utils/slices/moviesSlice.ts)
+
+[userSlice.ts](mdc:src/utils/slices/userSlice.ts)
+
+[detailsSlice.ts](mdc:src/utils/slices/detailsSlice.ts)
+
+[preferencesSlice.ts](mdc:src/utils/slices/preferencesSlice.ts)
+
+[geminiSlice.ts](mdc:src/utils/slices/geminiSlice.ts)
+description:
+globs:
+alwaysApply: false
+---

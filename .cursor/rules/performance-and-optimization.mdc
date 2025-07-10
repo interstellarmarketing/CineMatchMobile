@@ -1,0 +1,21 @@
+Covers performance optimizations specific to React Native mobile development, including React Query for API caching, code splitting with lazy loading, React.memo for component optimization, and mobile-specific performance best practices.
+Helpful for understanding and implementing performance improvements, caching strategies, and mobile optimization techniques.
+[AppNavigator.tsx](mdc:src/navigation/AppNavigator.tsx)
+
+[usePopularMovies.ts](mdc:src/hooks/usePopularMovies.ts)
+
+[useTrendingMovies.ts](mdc:src/hooks/useTrendingMovies.ts)
+
+[useTopRatedMovies.ts](mdc:src/hooks/useTopRatedMovies.ts)
+
+[useUpcomingMovies.ts](mdc:src/hooks/useUpcomingMovies.ts)
+
+[useMovieDetails.ts](mdc:src/hooks/useMovieDetails.ts)
+
+[useMovieTrailer.ts](mdc:src/hooks/useMovieTrailer.ts)
+
+[useSearchMovies.ts](mdc:src/hooks/useSearchMovies.ts)
+description:
+globs:
+alwaysApply: false
+---

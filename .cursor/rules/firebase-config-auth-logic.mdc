@@ -1,0 +1,16 @@
+Handles Firebase setup (initialization, auth instance) and authentication-related services and UI. Relevant for questions about user login, registration, Firebase services, auth state management, and Firestore operations.
+[firebase.ts](mdc:src/utils/firebase.ts)
+
+[authService.ts](mdc:src/utils/authService.ts)
+
+[firestoreService.ts](mdc:src/utils/firestoreService.ts)
+
+[LoginScreen.tsx](mdc:src/screens/LoginScreen.tsx)
+
+[useAuth.ts](mdc:src/hooks/useAuth.ts)
+
+[userSlice.ts](mdc:src/utils/slices/userSlice.ts)
+description:
+globs:
+alwaysApply: false
+---

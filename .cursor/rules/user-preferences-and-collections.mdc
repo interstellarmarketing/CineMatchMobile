@@ -1,0 +1,15 @@
+Handles user preferences, favorites, watchlist, and custom movie lists functionality. Includes cloud synchronization with Firebase Firestore, local state management, and UI components for managing user collections.
+Relevant for tasks related to user data management, favorites/watchlist functionality, or cloud synchronization features.
+[MyListsScreen.tsx](mdc:src/screens/MyListsScreen.tsx)
+
+[FavoriteButton.tsx](mdc:src/components/FavoriteButton.tsx)
+
+[WatchlistButton.tsx](mdc:src/components/WatchlistButton.tsx)
+
+[preferencesSlice.ts](mdc:src/utils/slices/preferencesSlice.ts)
+
+[firestoreService.ts](mdc:src/utils/firestoreService.ts)
+description:
+globs:
+alwaysApply: false
+---

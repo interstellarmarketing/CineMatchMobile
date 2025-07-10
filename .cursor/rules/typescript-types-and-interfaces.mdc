@@ -1,0 +1,7 @@
+Contains all shared TypeScript interfaces, types, and type definitions used throughout the mobile application. Essential for understanding data structures, component props, API responses, and Redux state types.
+Vital for maintaining type safety, understanding data flow, and ensuring consistent interfaces across the application.
+[index.ts](mdc:src/types/index.ts)
+description:
+globs:
+alwaysApply: false
+---
