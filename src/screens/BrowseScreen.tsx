@@ -1,95 +1,261 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  Image,
   TouchableOpacity,
-  Platform,
   FlatList,
+  Animated,
+  PanResponder,
+  Modal,
+  Pressable,
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { COLORS, IMG_CDN_URL } from '../utils/constants';
-import MovieList from '../components/MovieList';
+import { COLORS } from '../utils/constants';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import { useTrendingMovies } from '../hooks/useTrendingMovies';
 import { usePopularMovies } from '../hooks/usePopularMovies';
-import { useTopRatedMovies } from '../hooks/useTopRatedMovies';
-import { useUpcomingMovies } from '../hooks/useUpcomingMovies';
 import { useTrendingTV } from '../hooks/useTrendingTV';
 import { usePopularTV } from '../hooks/usePopularTV';
-import { useTopRatedTV } from '../hooks/useTopRatedTV';
-import { useUpcomingTV } from '../hooks/useUpcomingTV';
-import { Movie, TVShow } from '../types';
+import { useInfiniteFilteredMovies, useInfiniteFilteredTVShows } from '../hooks/useFilteredMovies';
+import { useFilterState } from '../hooks/useFilterState';
+import { Movie, TVShow, ApiResponse } from '../types';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MovieCard from '../components/MovieCard';
 import TVCard from '../components/TVCard';
 import Logo from '../components/Logo';
+import { Feather } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
 
-const TAB_OPTIONS = [
-  { key: 'all', label: 'All' },
-  { key: 'movies', label: 'Movies' },
-  { key: 'tv', label: 'TV' },
-];
-
-const FILTER_OPTIONS = [
+const SORT_OPTIONS = [
   { key: 'trending', label: 'Trending' },
-  { key: 'popular', label: 'Popular' },
-  { key: 'topRated', label: 'Top Rated' },
-  { key: 'upcoming', label: 'Coming Soon' },
+  { key: 'popularity.desc', label: 'Popular' },
+  { key: 'vote_average.desc', label: 'Rating' },
+  { key: 'release_date.desc', label: 'Release Date' },
+  { key: 'title.asc', label: 'Title' },
 ];
+
+const GENRES = [
+  { id: 28, name: 'Action' },
+  { id: 35, name: 'Comedy' },
+  { id: 18, name: 'Drama' },
+  { id: 27, name: 'Horror' },
+  { id: 10749, name: 'Romance' },
+  { id: 16, name: 'Animation' },
+  { id: 12, name: 'Adventure' },
+  { id: 80, name: 'Crime' },
+  { id: 99, name: 'Documentary' },
+  { id: 14, name: 'Fantasy' },
+  { id: 9648, name: 'Mystery' },
+  { id: 878, name: 'Science Fiction' },
+  { id: 53, name: 'Thriller' },
+];
+
+const MOVIE_AGE_RATINGS = ['G', 'PG', 'PG-13', 'R', 'NC-17'];
+const TV_AGE_RATINGS = ['TV-Y', 'TV-G', 'TV-PG', 'TV-14', 'TV-MA'];
 
 const BrowseScreen = () => {
   const navigation = useNavigation();
-  const { movies: trendingMovies, loading: trendingLoading, error: trendingError } = useTrendingMovies();
-  const { movies: popularMovies, loading: popularLoading, error: popularError } = usePopularMovies();
-  const { movies: topRatedMovies, loading: topRatedLoading, error: topRatedError } = useTopRatedMovies();
-  const { movies: upcomingMovies, loading: upcomingLoading, error: upcomingError } = useUpcomingMovies();
+  const insets = useSafeAreaInsets();
+  const { movies: trendingMovies, loading: trendingMoviesLoading, error: trendingError } = useTrendingMovies();
+  const { movies: popularMovies, loading: popularMoviesLoading, error: popularError } = usePopularMovies();
   const { shows: trendingTV, loading: trendingTVLoading, error: trendingTVError } = useTrendingTV();
   const { shows: popularTV, loading: popularTVLoading, error: popularTVError } = usePopularTV();
-  const { shows: topRatedTV, loading: topRatedTVLoading, error: topRatedTVError } = useTopRatedTV();
-  const { shows: upcomingTV, loading: upcomingTVLoading, error: upcomingTVError } = useUpcomingTV();
 
-  const [selectedTab, setSelectedTab] = useState<'movies' | 'tv' | 'all'>('movies');
-  const [selectedFilter, setSelectedFilter] = useState<'popularity' | 'trending'>('popularity');
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<'all' | 'movies' | 'tv'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'trending' | 'popularity.desc' | 'vote_average.desc' | 'release_date.desc' | 'title.asc'>('trending');
+  const [showSortSheet, setShowSortSheet] = useState(false);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [filterPan] = useState(new Animated.Value(0));
 
-  // Image preloading for better performance
-  useEffect(() => {
-    const preloadImages = async () => {
-      const allMovies = [
-        ...trendingMovies.slice(0, 5),
-        ...popularMovies.slice(0, 5),
-        ...topRatedMovies.slice(0, 5),
-        ...upcomingMovies.slice(0, 5),
-      ];
-      
-      const imagePromises = allMovies.map(movie => 
-        Image.prefetch(`${IMG_CDN_URL}${movie.poster_path}`)
-      );
-      
-      try {
-        await Promise.all(imagePromises);
-      } catch (error) {
-        // Silently handle image preload errors
-        console.warn('Image preload failed:', error);
+  const pan = useState(new Animated.Value(0))[0];
+  const panResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
+    onPanResponderMove: (_, gestureState) => {
+      if (gestureState.dy > 0) pan.setValue(gestureState.dy);
+    },
+    onPanResponderRelease: (_, gestureState) => {
+      if (gestureState.dy > 80) {
+        closeSortSheet();
+      } else {
+        Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
       }
-    };
+    },
+  });
 
-    if (trendingMovies.length > 0 || popularMovies.length > 0 || 
-        topRatedMovies.length > 0 || upcomingMovies.length > 0) {
-      preloadImages();
+  const filterPanResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
+    onPanResponderMove: (_, gestureState) => {
+      if (gestureState.dy > 0) filterPan.setValue(gestureState.dy);
+    },
+    onPanResponderRelease: (_, gestureState) => {
+      if (gestureState.dy > 80) {
+        closeFilterSheet();
+      } else {
+        Animated.spring(filterPan, { toValue: 0, useNativeDriver: true }).start();
+      }
+    },
+  });
+
+  const openSortSheet = () => {
+    setShowSortSheet(true);
+    pan.setValue(300);
+    Animated.timing(pan, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  };
+  const closeSortSheet = () => {
+    Animated.timing(pan, {
+      toValue: 300,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setShowSortSheet(false));
+  };
+
+  const openFilterSheet = () => {
+    setShowFilterSheet(true);
+    filterPan.setValue(300);
+    Animated.timing(filterPan, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  };
+  const closeFilterSheet = () => {
+    Animated.timing(filterPan, {
+      toValue: 300,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowFilterSheet(false);
+      if (hasActiveFilters && selectedFilter === 'trending') {
+        setSelectedFilter('popularity.desc');
+        updateSortBy('popularity.desc');
+      }
+    });
+  };
+
+  const {
+    filterState,
+    movieFilters,
+    tvFilters,
+    updateGenreFilter,
+    updateMinRating,
+    toggleMovieAgeRating,
+    toggleTvAgeRating,
+    updateSortBy,
+    clearFilters,
+    hasActiveFilters,
+  } = useFilterState();
+
+  // The 'enabled' flag is now controlled by hasActiveFilters and the selected tab
+  const {
+    data: infiniteMoviesData,
+    fetchNextPage: fetchNextMoviesPage,
+    hasNextPage: hasNextMoviesPage,
+    isFetchingNextPage: isFetchingNextMoviesPage,
+  } = useInfiniteFilteredMovies(
+    movieFilters,
+    hasActiveFilters && (selectedTab === 'all' || selectedTab === 'movies')
+  );
+
+  const {
+    data: infiniteTVData,
+    fetchNextPage: fetchNextTVPage,
+    hasNextPage: hasNextTVPage,
+    isFetchingNextPage: isFetchingNextTVPage,
+  } = useInfiniteFilteredTVShows(
+    tvFilters,
+    hasActiveFilters && (selectedTab === 'all' || selectedTab === 'tv')
+  );
+
+  // This is the core fix: a memoized selector for the grid's data
+  const gridData = useMemo(() => {
+    if (hasActiveFilters) {
+      // When filters are ON, use data from the infinite queries
+      const filteredMovies = infiniteMoviesData?.pages.flatMap((p: ApiResponse<Movie>) => p.results || []) || [];
+      const filteredTV = infiniteTVData?.pages.flatMap((p: ApiResponse<TVShow>) => p.results || []) || [];
+
+      if (selectedTab === 'movies') return filteredMovies;
+      if (selectedTab === 'tv') return filteredTV;
+      // 'all' tab
+      const allFiltered = [...filteredMovies, ...filteredTV];
+      return Array.from(new Map(allFiltered.map(item => [item.id, item])).values());
+
+    } else {
+      // When filters are OFF, use either trending OR popular data based on sort selection
+      let defaultList: (Movie | TVShow)[] = [];
+      
+      if (selectedFilter === 'trending') {
+        // Use trending data
+        if (selectedTab === 'all') {
+          defaultList = [...trendingMovies, ...trendingTV];
+        } else if (selectedTab === 'movies') {
+          defaultList = [...trendingMovies];
+        } else { // 'tv'
+          defaultList = [...trendingTV];
+        }
+      } else {
+        // Use popular data (or other sorting methods use popular as base)
+        if (selectedTab === 'all') {
+          defaultList = [...popularMovies, ...popularTV];
+        } else if (selectedTab === 'movies') {
+          defaultList = [...popularMovies];
+        } else { // 'tv'
+          defaultList = [...popularTV];
+        }
+      }
+      
+      const unique = Array.from(new Map(defaultList.map(item => [item.id, item])).values());
+      
+      // Apply sorting based on selected filter
+      if (selectedFilter === 'vote_average.desc') {
+        unique.sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+      } else if (selectedFilter === 'release_date.desc') {
+        unique.sort((a, b) => {
+          const dateA = new Date(('release_date' in a ? a.release_date : a.first_air_date) || '1970-01-01');
+          const dateB = new Date(('release_date' in b ? b.release_date : b.first_air_date) || '1970-01-01');
+          return dateB.getTime() - dateA.getTime();
+        });
+      } else if (selectedFilter === 'title.asc') {
+        unique.sort((a, b) => {
+          const titleA = ('title' in a ? a.title : a.name) || '';
+          const titleB = ('title' in b ? b.title : b.name) || '';
+          return titleA.localeCompare(titleB);
+        });
+      } else {
+        // Default to popularity sorting for 'popularity.desc' and 'trending'
+        unique.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+      }
+      
+      return unique;
     }
-  }, [trendingMovies, popularMovies, topRatedMovies, upcomingMovies]);
-
-  const handleMoviePress = useCallback((movie: Movie) => {
-    navigation.navigate('MovieDetails' as never, { 
+  }, [hasActiveFilters, selectedTab, selectedFilter, infiniteMoviesData, infiniteTVData, trendingMovies, trendingTV, popularMovies, popularTV, updateSortBy]);
+  
+  const loadMore = useCallback(() => {
+    // Only load more if filters are active, since default lists aren't paginated
+    if (hasActiveFilters) {
+        if (selectedTab !== 'tv' && hasNextMoviesPage) {
+            fetchNextMoviesPage();
+        }
+        if (selectedTab !== 'movies' && hasNextTVPage) {
+            fetchNextTVPage();
+        }
+    }
+  }, [hasActiveFilters, selectedTab, hasNextMoviesPage, hasNextTVPage, fetchNextMoviesPage, fetchNextTVPage]);
+  
+  const handleMoviePress = useCallback((movie: Movie | TVShow) => {
+    const mediaType = 'name' in movie ? 'tv' : 'movie';
+    (navigation as any).navigate('MovieDetails', { 
       movieId: movie.id, 
-      movie 
-    } as never);
+      mediaType: mediaType 
+    });
   }, [navigation]);
 
   const handleProfilePress = useCallback(() => {
@@ -100,49 +266,76 @@ const BrowseScreen = () => {
     navigation.navigate('Search' as never);
   }, [navigation]);
 
-  const isLoading =
-    trendingLoading || popularLoading || topRatedLoading || upcomingLoading ||
-    trendingTVLoading || popularTVLoading || topRatedTVLoading || upcomingTVLoading;
-  const hasError =
-    trendingError || popularError || topRatedError || upcomingError ||
-    trendingTVError || popularTVError || topRatedTVError || upcomingTVError;
+  const hasError = trendingError || popularError || trendingTVError || popularTVError;
 
-  // Helper to get filtered and sorted list for the grid
-  const getGridList = () => {
-    let list: (Movie | TVShow)[] = [];
-    if (selectedTab === 'all') {
-      list = [...trendingMovies, ...trendingTV, ...popularMovies, ...popularTV];
-    } else if (selectedTab === 'movies') {
-      list = [...trendingMovies, ...popularMovies];
-    } else {
-      list = [...trendingTV, ...popularTV];
-    }
-    // Remove duplicates by id
-    const unique = Array.from(new Map(list.map(item => [item.id, item])).values());
-    // Sort
-    if (selectedFilter === 'popularity') {
-      return unique.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-    } else {
-      return unique.sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0));
-    }
-  };
-  const gridData = getGridList();
-
-  // Responsive numColumns
-  const numColumns = 2;
-
-  // Render card
   const renderMedia = ({ item }: { item: Movie | TVShow }) => {
-    if (item.media_type === 'tv' || !!item.name) {
-      return <TVCard show={item as TVShow} onPress={handleMoviePress} />;
+    if ('name' in item) {
+      return <TVCard movie={item as TVShow} onPress={handleMoviePress} />;
     }
-    return <MovieCard poster_path={item.poster_path} movie={item as Movie} onPress={handleMoviePress} />;
+    return <MovieCard movie={item as Movie} onPress={handleMoviePress} />;
   };
 
-  if (isLoading) {
+  const handleSortChange = (sortKey: string) => {
+    if (sortKey !== 'trending') {
+      updateSortBy(sortKey as 'popularity.desc' | 'vote_average.desc' | 'release_date.desc' | 'title.asc');
+    }
+    setSelectedFilter(sortKey as 'trending' | 'popularity.desc' | 'vote_average.desc' | 'release_date.desc' | 'title.asc');
+    closeSortSheet();
+  };
+
+  const isLoading = trendingMoviesLoading || popularMoviesLoading || trendingTVLoading || popularTVLoading;
+
+  const renderListHeader = useCallback(() => (
+    <View>
+      <View style={styles.tabSectionWrapperNoBg}>
+        <View style={styles.tabRowWithSeparateFilter}>
+          <View style={styles.tabContainer}>
+            {['all', 'movies', 'tv'].map(tabKey => {
+              const label = tabKey === 'all' ? 'All' : tabKey === 'movies' ? 'Movies' : 'TV';
+              const isActive = selectedTab === tabKey;
+              return (
+                <TouchableOpacity
+                  key={tabKey}
+                  style={[styles.tabPillSmall, isActive ? styles.tabPillActiveSmall : styles.tabPillInactiveSmall]}
+                  onPress={() => setSelectedTab(tabKey as 'all' | 'movies' | 'tv')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.tabPillLabelSmall, isActive ? styles.tabPillLabelActiveSmall : styles.tabPillLabelInactiveSmall]}>{label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <TouchableOpacity
+            style={[styles.filterButtonSeparate, hasActiveFilters && styles.filterButtonActive]}
+            onPress={openFilterSheet}
+            activeOpacity={0.8}
+          >
+            <Icon name="filter-list" size={18} color={hasActiveFilters ? COLORS.accent : COLORS.primary} />
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={styles.sortRowRedesignedCompactPad}>
+        <Text style={styles.sortCountLabelCompact}>{`${gridData.length} titles  –`}</Text>
+        <View style={styles.sortDropdownWrapperCompact}>
+          <TouchableOpacity
+            style={styles.sortDropdownCompactPad}
+            activeOpacity={0.8}
+            onPress={openSortSheet}
+          >
+            <Text style={styles.sortDropdownTextCompact}>
+              {SORT_OPTIONS.find(opt => opt.key === selectedFilter)?.label || 'Popular'}
+            </Text>
+            <Icon name={'arrow-drop-down'} size={18} color={COLORS.primary} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  ), [selectedTab, gridData.length, selectedFilter, hasActiveFilters]);
+
+  if (isLoading && gridData.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
-        <LoadingSpinner message="Loading movies..." />
+        <LoadingSpinner message="Loading..." />
       </SafeAreaView>
     );
   }
@@ -150,256 +343,419 @@ const BrowseScreen = () => {
   if (hasError) {
     return (
       <SafeAreaView style={styles.container}>
-        <ErrorMessage message="Error loading movies. Please try again." />
+        <ErrorMessage message="Error loading content. Please try again." />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Sticky Header */}
-      <View style={styles.stickyHeader}>
-        <View style={styles.headerTop}>
-          <Logo size="medium" style={styles.logo} />
-          <View style={styles.headerButtons}>
-            <TouchableOpacity style={styles.headerButton} onPress={handleSearchPress}>
-              <Icon name="search" size={22} color={COLORS.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerButton} onPress={handleProfilePress}>
-              <Icon name="person" size={22} color={COLORS.primary} />
-            </TouchableOpacity>
+    <View style={styles.containerSplitBg}>
+      <View style={styles.topBg} />
+      
+      <SafeAreaView style={styles.safeAreaContent} edges={['left', 'right']}>
+        <View style={[styles.topBlueSection, { paddingTop: insets.top }]}>
+          <View style={styles.stickyHeader}>
+            <View style={styles.headerTopCentered}>
+              <Logo size="large" style={styles.logoLargeCentered} />
+              <View style={styles.headerButtonsNoBg}>
+                <TouchableOpacity style={styles.headerButtonNoBg} onPress={handleSearchPress}>
+                  <Feather name="search" size={20} color={COLORS.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.headerButtonNoBg} onPress={handleProfilePress}>
+                  <Feather name="user" size={20} color={COLORS.primary} />
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
-      </View>
-      {/* Tabs and filter/sort icons */}
-      <View style={styles.tabBarRow}>
-        <View style={styles.tabBar}>
-          {TAB_OPTIONS.map(tab => (
-            <TouchableOpacity
-              key={tab.key}
-              style={[styles.tabButton, selectedTab === tab.key && styles.tabButtonActive]}
-              onPress={() => setSelectedTab(tab.key as 'movies' | 'tv' | 'all')}
-            >
-              <Text style={[styles.tabLabel, selectedTab === tab.key && styles.tabLabelActive]}>{tab.label}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.mainContentDarkerBg}>
+          <FlatList
+            data={gridData}
+            renderItem={renderMedia}
+            keyExtractor={item => item.id.toString()}
+            numColumns={2}
+            contentContainerStyle={{ paddingBottom: 8 }}
+            showsVerticalScrollIndicator={false}
+            columnWrapperStyle={{ marginBottom: 4, paddingHorizontal: 20, justifyContent: 'space-between' }}
+            style={styles.grid}
+            ListHeaderComponent={renderListHeader}
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={(isFetchingNextMoviesPage || isFetchingNextTVPage) ? <ActivityIndicator style={{ marginVertical: 20 }} /> : null}
+          />
         </View>
-        <View style={styles.tabIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Icon name="sort" size={22} color={selectedTab === 'all' ? COLORS.primary : COLORS.text} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Icon name="filter-list" size={22} color={selectedTab === 'all' ? COLORS.primary : COLORS.text} />
-          </TouchableOpacity>
-        </View>
-      </View>
-      {/* Label and dropdown */}
-      <View style={styles.sortRow}>
-        <Text style={styles.sortLabel}>{`${gridData.length} titles sorted by`}</Text>
-        <View style={styles.dropdownWrapper}>
-          <TouchableOpacity
-            style={styles.dropdown}
-            activeOpacity={0.8}
-            onPress={() => setShowDropdown(!showDropdown)}
-          >
-            <Text style={styles.dropdownText}>
-              {selectedFilter === 'popularity' ? 'Popularity' : 'Trending'}
-            </Text>
-            <Icon name={showDropdown ? 'arrow-drop-up' : 'arrow-drop-down'} size={20} color={COLORS.text} />
-          </TouchableOpacity>
-          {showDropdown && (
-            <View style={styles.dropdownMenu}>
-              <TouchableOpacity
-                style={styles.dropdownItem}
-                onPress={() => { setSelectedFilter('popularity'); setShowDropdown(false); }}
-              >
-                <Text style={styles.dropdownItemText}>Popularity</Text>
+      </SafeAreaView>
+      <Modal
+        visible={showFilterSheet}
+        animationType="fade"
+        transparent
+        onRequestClose={closeFilterSheet}
+      >
+        <Pressable style={styles.sheetOverlay} onPress={closeFilterSheet} />
+        <Animated.View
+          style={[
+            styles.fullScreenSheet,
+            { paddingTop: insets.top, transform: [{ translateY: filterPan }] },
+          ]}
+          {...filterPanResponder.panHandlers}
+        >
+          <View style={styles.sheetIndicator} />
+          <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+            <Text style={styles.sheetTitle}>Filter</Text>
+            <Text style={styles.sheetSectionTitle}>Genre</Text>
+            <View style={styles.genreChipsContainer}>
+              {GENRES.map((genre) => {
+                const state = filterState.genreFilters[genre.id] || null;
+                let chipStyle = styles.genreChip;
+                let chipText = styles.genreChipText;
+                if (state === 'include') {
+                  chipStyle = [styles.genreChip, styles.genreChipInclude];
+                  chipText = [styles.genreChipText, styles.genreChipTextInclude];
+                } else if (state === 'exclude') {
+                  chipStyle = [styles.genreChip, styles.genreChipExclude];
+                  chipText = [styles.genreChipText, styles.genreChipTextExclude];
+                }
+                return (
+                  <TouchableOpacity
+                    key={genre.id}
+                    style={chipStyle}
+                    onPress={() => updateGenreFilter(genre.id)}
+                  >
+                    <Text style={chipText}>{genre.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={styles.sheetSectionTitle}>Minimum Rating</Text>
+            <View style={styles.ratingSliderRow}>
+              <Slider
+                style={{ flex: 1 }}
+                minimumValue={0}
+                maximumValue={10}
+                step={0.5}
+                value={filterState.minRating}
+                onValueChange={updateMinRating}
+                minimumTrackTintColor={COLORS.primary}
+                maximumTrackTintColor={COLORS.surface}
+                thumbTintColor={COLORS.primary}
+              />
+              <Text style={styles.ratingValueText}>{filterState.minRating.toFixed(1)}</Text>
+            </View>
+            <Text style={styles.sheetSectionTitle}>Movie Age Rating</Text>
+            <View style={styles.genreChipsContainer}>
+              {MOVIE_AGE_RATINGS.map((rating) => (
+                <TouchableOpacity
+                  key={rating}
+                  style={[styles.genreChip, filterState.movieAgeRatings.includes(rating) && styles.genreChipInclude]}
+                  onPress={() => toggleMovieAgeRating(rating)}
+                >
+                  <Text style={[styles.genreChipText, filterState.movieAgeRatings.includes(rating) && styles.genreChipTextInclude]}>{rating}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.sheetSectionTitle}>TV Age Rating</Text>
+            <View style={styles.genreChipsContainer}>
+              {TV_AGE_RATINGS.map((rating) => (
+                <TouchableOpacity
+                  key={rating}
+                  style={[styles.genreChip, filterState.tvAgeRatings.includes(rating) && styles.genreChipInclude]}
+                  onPress={() => toggleTvAgeRating(rating)}
+                >
+                  <Text style={[styles.genreChipText, filterState.tvAgeRatings.includes(rating) && styles.genreChipTextInclude]}>{rating}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.sheetFooter}>
+              <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
+                <Text style={styles.clearButtonText}>Clear</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.dropdownItem}
-                onPress={() => { setSelectedFilter('trending'); setShowDropdown(false); }}
-              >
-                <Text style={styles.dropdownItemText}>Trending</Text>
+              <TouchableOpacity style={styles.applyButton} onPress={closeFilterSheet}>
+                <Text style={styles.applyButtonText}>Done</Text>
               </TouchableOpacity>
             </View>
-          )}
-        </View>
-      </View>
-      {/* Responsive grid of cards */}
-      <FlatList
-        data={gridData}
-        renderItem={renderMedia}
-        keyExtractor={item => item.id.toString()}
-        numColumns={numColumns}
-        contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 8 }}
-        showsVerticalScrollIndicator={false}
-        columnWrapperStyle={{ marginBottom: 8 }}
-        style={styles.grid}
-      />
-    </SafeAreaView>
+          </ScrollView>
+        </Animated.View>
+      </Modal>
+      <Modal
+        visible={showSortSheet}
+        animationType="fade"
+        transparent
+        onRequestClose={closeSortSheet}
+      >
+        <Pressable style={styles.sheetOverlay} onPress={closeSortSheet} />
+        <Animated.View
+          style={[
+            styles.sortSheet,
+            { paddingBottom: insets.bottom, transform: [{ translateY: pan }] },
+          ]}
+          {...panResponder.panHandlers}
+        >
+          <View style={styles.sheetIndicator} />
+          {SORT_OPTIONS.map((option) => (
+            <TouchableOpacity
+              key={option.key}
+              style={styles.sortOption}
+              onPress={() => handleSortChange(option.key)}
+            >
+              <Text style={styles.sortOptionText}>{option.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </Animated.View>
+      </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  content: {
-    flex: 1,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  tabButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 28,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    backgroundColor: 'transparent',
-    marginHorizontal: 4,
-  },
-  tabButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  tabLabel: {
-    color: COLORS.primary,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  tabLabelActive: {
-    color: COLORS.background,
-  },
-  filterBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    zIndex: 2,
-  },
-  dropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 18,
-    minWidth: 120,
-    justifyContent: 'center',
-  },
-  dropdownText: {
-    color: COLORS.primary,
-    fontWeight: '600',
-    fontSize: 16,
-    marginRight: 4,
-  },
-  dropdownMenu: {
-    position: 'absolute',
-    top: 44,
-    right: 0,
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    zIndex: 10,
-  },
-  dropdownItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  dropdownItemText: {
-    color: COLORS.text,
-    fontSize: 16,
-  },
-  stickyHeader: {
-    zIndex: 10,
-    backgroundColor: COLORS.background,
-    // Add shadow if needed
-  },
-  tabBarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  tabIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconButton: {
-    marginLeft: 8,
-    padding: 6,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-  },
-  sortRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    marginBottom: 8,
-  },
-  sortLabel: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  dropdownWrapper: {
-    position: 'relative',
-  },
-  grid: {
-    flex: 1,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingTop: 4,
-    paddingBottom: 4,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  headerButton: {
-    backgroundColor: 'transparent',
-    padding: 6,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    marginLeft: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logo: {
-    // Logo styling handled by Logo component
-  },
+    container: {
+        flex: 1,
+        backgroundColor: COLORS.background,
+    },
+    containerSplitBg: {
+      flex: 1,
+    },
+    topBg: {
+      backgroundColor: COLORS.JW_TOP_BG,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 300, 
+    },
+    safeAreaContent: {
+      flex: 1,
+    },
+    topBlueSection: {
+      backgroundColor: COLORS.JW_TOP_BG,
+      paddingBottom: 12,
+    },
+    mainContentDarkerBg: {
+      flex: 1,
+      backgroundColor: '#0A1016',
+    },
+    stickyHeader: {
+        paddingHorizontal: 16,
+        paddingBottom: 8,
+    },
+    headerTopCentered: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    logoLargeCentered: {
+        
+    },
+    headerButtonsNoBg: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    headerButtonNoBg: {
+        padding: 6,
+    },
+    grid: {
+        flex: 1,
+    },
+    tabSectionWrapperNoBg: {
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+    },
+    tabRowWithSeparateFilter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: COLORS.JW_PILL_STRIP,
+        borderRadius: 20,
+        padding: 4,
+    },
+    tabContainer: {
+        flex: 1,
+        flexDirection: 'row',
+    },
+    tabPillSmall: {
+        flex: 1,
+        paddingVertical: 8,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    tabPillActiveSmall: {
+        backgroundColor: '#3B82F6',
+    },
+    tabPillInactiveSmall: {
+        backgroundColor: 'transparent',
+    },
+    tabPillLabelSmall: {
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    tabPillLabelActiveSmall: {
+        color: '#FFFFFF',
+    },
+    tabPillLabelInactiveSmall: {
+        color: '#9CA3AF',
+    },
+    filterButtonSeparate: {
+        padding: 10,
+    },
+    filterButtonActive: {
+        backgroundColor: 'rgba(252, 163, 17, 0.2)',
+    },
+    sortRowRedesignedCompactPad: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        paddingHorizontal: 18,
+        paddingVertical: 8,
+    },
+    sortCountLabelCompact: {
+        color: COLORS.JW_TEXT_MEDIUM,
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    sortDropdownWrapperCompact: {
+        marginLeft: 4,
+    },
+    sortDropdownCompactPad: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 4,
+    },
+    sortDropdownTextCompact: {
+        color: COLORS.primary,
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    sheetOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    fullScreenSheet: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '95%',
+        backgroundColor: '#181A20',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 16,
+    },
+    sheetIndicator: {
+        width: 40,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#4B5563',
+        alignSelf: 'center',
+        marginBottom: 16,
+    },
+    sheetTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: 'white',
+        textAlign: 'center',
+        marginBottom: 24,
+    },
+    sheetSectionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: 'white',
+        marginBottom: 12,
+        marginTop: 16,
+    },
+    genreChipsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    genreChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 16,
+        backgroundColor: COLORS.surface,
+    },
+    genreChipInclude: {
+        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        borderColor: '#3B82F6',
+    },
+    genreChipExclude: {
+        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+        borderColor: '#EF4444',
+    },
+    genreChipText: {
+        color: '#E5E7EB',
+        fontWeight: '500',
+        fontSize: 14,
+    },
+    genreChipTextInclude: {
+        color: '#60A5FA',
+        fontWeight: '500',
+        fontSize: 14,
+    },
+    genreChipTextExclude: {
+        color: '#F87171',
+        fontWeight: '500',
+        fontSize: 14,
+    },
+    ratingSliderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    ratingValueText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    sheetFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 32,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.surface,
+        paddingTop: 16,
+    },
+    clearButton: {
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 8,
+    },
+    clearButtonText: {
+        color: COLORS.primary,
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    applyButton: {
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 40,
+        paddingVertical: 12,
+        borderRadius: 8,
+    },
+    applyButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    sortSheet: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#1F2937',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 16,
+    },
+    sortOption: {
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#374151',
+    },
+    sortOptionText: {
+        color: 'white',
+        fontSize: 16,
+        textAlign: 'center',
+    },
 });
 
 export default BrowseScreen; 

@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
-import { RootState } from '../types';
+import { RootState, Movie } from '../types';
 import GeminiMovieCard from './GeminiMovieCard';
 import { COLORS } from '../utils/constants';
 
@@ -32,14 +32,15 @@ const GeminiMovieSuggestions = () => {
 
 
 
-  const handleMoviePress = (movie: any) => {
+  const handleMoviePress = (movie: Movie) => {
+    const mediaType = movie.media_type || (movie.title ? 'movie' : 'tv');
     navigation.navigate('MovieDetails' as never, { 
       movieId: movie.id, 
-      movie 
+      mediaType 
     } as never);
   };
 
-  const renderMovie = ({ item }: { item: any }) => (
+  const renderMovie = ({ item }: { item: Movie }) => (
     <TouchableOpacity
       style={styles.movieContainer}
       onPress={() => handleMoviePress(item)}

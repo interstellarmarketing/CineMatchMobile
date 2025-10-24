@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "CineMatch",
-    "slug": "CineMatchMobile",
-    "version": "1.0.0",
+    "slug": "cinematch",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -14,7 +14,15 @@
     },
     "ios": {
       "supportsTablet": true,
-      "icon": "./assets/icon.png"
+      "icon": "./assets/icon.png",
+      "bundleIdentifier": "com.cinematch.mobile",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app does not use camera access",
+        "NSPhotoLibraryUsageDescription": "This app does not access photo library",
+        "NSLocationWhenInUseUsageDescription": "This app does not use location services",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,11 +30,24 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "icon": "./assets/icon.png"
+      "icon": "./assets/icon.png",
+      "package": "com.cinematch.mobile",
+      "versionCode": 1,
+      "permissions": []
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "jsEngine": "hermes"
+    "jsEngine": "hermes",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5a65b5ac-720a-4ebb-bde7-4ff06f14aade"
+      }
+    },
+    "owner": "zsmithbiz1"
   }
 }

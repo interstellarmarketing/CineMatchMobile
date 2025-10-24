@@ -159,12 +159,50 @@ interface Video {
 }
 ```
 
-##### Search Movies
+##### Get TV Show Endpoints
+
+##### Get Popular TV Shows
 ```typescript
-// GET /search/movie
-const searchMovies = async (query: string, page: number = 1) => {
+// GET /tv/popular
+const getPopularTVShows = async (page: number = 1) => {
   const response = await fetch(
-    `${BASE_URL}/search/movie?query=${encodeURIComponent(query)}&page=${page}`,
+    `${BASE_URL}/tv/popular?page=${page}`,
+    API_OPTIONS
+  );
+  return response.json();
+};
+```
+
+##### Get Top Rated TV Shows
+```typescript
+// GET /tv/top_rated
+const getTopRatedTVShows = async (page: number = 1) => {
+  const response = await fetch(
+    `${BASE_URL}/tv/top_rated?page=${page}`,
+    API_OPTIONS
+  );
+  return response.json();
+};
+```
+
+##### Get Upcoming TV Shows
+```typescript
+// GET /tv/on_the_air
+const getUpcomingTVShows = async (page: number = 1) => {
+  const response = await fetch(
+    `${BASE_URL}/tv/on_the_air?page=${page}`,
+    API_OPTIONS
+  );
+  return response.json();
+};
+```
+
+##### Get Trending TV Shows
+```typescript
+// GET /trending/tv/week
+const getTrendingTVShows = async () => {
+  const response = await fetch(
+    `${BASE_URL}/trending/tv/week?language=en-US`,
     API_OPTIONS
   );
   return response.json();
@@ -173,15 +211,17 @@ const searchMovies = async (query: string, page: number = 1) => {
 
 #### Data Models
 
-##### Movie
+##### Movie & TVShow
 ```typescript
 interface Movie {
   id: number;
-  title: string;
+  title: string; // For movies
+  name: string; // For TV shows
   overview: string;
   poster_path: string;
   backdrop_path: string;
-  release_date: string;
+  release_date: string; // For movies
+  first_air_date: string; // For TV shows
   vote_average: number;
   vote_count: number;
   popularity: number;
@@ -784,36 +824,15 @@ export const fetchMovieDetails = createAsyncThunk(
   }
 );
 
-export const fetchMovieTrailer = createAsyncThunk(
-  'details/fetchMovieTrailer',
-  async (movieId: number, { rejectWithValue }) => {
-    try {
-      const response = await fetch(
-        `${BASE_URL}/movie/${movieId}/videos`,
-        API_OPTIONS
-      );
-      const data = await response.json();
-      const trailer = data.results.find((video: Video) => 
-        video.type === 'Trailer' && video.site === 'YouTube'
-      );
-      return trailer || null;
-    } catch (error: any) {
-      return rejectWithValue(error.message);
-    }
-  }
-);
-
 // Slice
 interface DetailsState {
   currentMovie: MovieDetails | null;
-  trailer: Video | null;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: DetailsState = {
   currentMovie: null,
-  trailer: null,
   loading: false,
   error: null,
 };
@@ -824,7 +843,6 @@ const detailsSlice = createSlice({
   reducers: {
     clearMovieDetails: (state) => {
       state.currentMovie = null;
-      state.trailer = null;
     },
     clearError: (state) => {
       state.error = null;
@@ -843,13 +861,6 @@ const detailsSlice = createSlice({
       })
       .addCase(fetchMovieDetails.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
-      })
-      // Movie trailer
-      .addCase(fetchMovieTrailer.fulfilled, (state, action) => {
-        state.trailer = action.payload;
-      })
-      .addCase(fetchMovieTrailer.rejected, (state, action) => {
         state.error = action.payload as string;
       });
   },
@@ -1148,22 +1159,128 @@ export const useUpcomingMovies = () => {
 import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../utils/store';
-import { fetchMovieDetails, fetchMovieTrailer } from '../utils/slices/detailsSlice';
+import { fetchMovieDetails } from '../utils/slices/detailsSlice';
+import { useTrailers } from './useTrailers';
 
 export const useMovieDetails = (movieId: number) => {
   const dispatch = useDispatch();
   const { currentMovie, trailer, loading, error } = useSelector(
     (state: RootState) => state.details
   );
+  const { bestTrailer } = useTrailers(movieId, 'movie');
 
   useEffect(() => {
     if (movieId) {
       dispatch(fetchMovieDetails(movieId));
-      dispatch(fetchMovieTrailer(movieId));
     }
   }, [dispatch, movieId]);
 
-  return { movie: currentMovie, trailer, loading, error };
+  return { movie: currentMovie, trailer: bestTrailer, loading, error };
+};
+```
+
+### TV Show Hooks
+
+#### Trending TV Shows Hook
+```typescript
+// src/hooks/useTrendingTV.ts
+import { useQuery } from '@tanstack/react-query';
+import { fetchTrendingTV } from '../utils/api'; // Assuming API function
+
+export const useTrendingTV = () => {
+  return useQuery({
+    queryKey: ['tv', 'trending'],
+    queryFn: fetchTrendingTV,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+```
+
+#### Popular TV Shows Hook
+```typescript
+// src/hooks/usePopularTV.ts
+import { useQuery } from '@tanstack/react-query';
+import { fetchPopularTV } from '../utils/api'; // Assuming API function
+
+export const usePopularTV = () => {
+  return useQuery({
+    queryKey: ['tv', 'popular'],
+    queryFn: fetchPopularTV,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+```
+
+#### Top Rated TV Shows Hook
+```typescript
+// src/hooks/useTopRatedTV.ts
+import { useQuery } from '@tanstack/react-query';
+import { fetchTopRatedTV } from '../utils/api'; // Assuming API function
+
+export const useTopRatedTV = () => {
+  return useQuery({
+    queryKey: ['tv', 'top-rated'],
+    queryFn: fetchTopRatedTV,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+```
+
+#### Upcoming TV Shows Hook
+```typescript
+// src/hooks/useUpcomingTV.ts
+import { useQuery } from '@tanstack/react-query';
+import { fetchUpcomingTV } from '../utils/api'; // Assuming API function
+
+export const useUpcomingTV = () => {
+  return useQuery({
+    queryKey: ['tv', 'upcoming'],
+    queryFn: fetchUpcomingTV,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+```
+
+### Advanced Hooks
+
+#### Trailers Hook
+```typescript
+// src/hooks/useTrailers.ts
+import { useState, useEffect } from 'react';
+
+export const useTrailers = (mediaId: number, mediaType: 'movie' | 'tv') => {
+  // ... implementation ...
+  return { trailers, bestTrailer, loading, error, hasTrailers };
+};
+```
+
+#### Watch Providers Hook
+```typescript
+// src/hooks/useWatchProviders.ts
+import { useQuery } from '@tanstack/react-query';
+
+export const useWatchProviders = (mediaType: 'movie' | 'tv', mediaId: number) => {
+  // ... implementation ...
+  return useQuery({ ... });
+};
+```
+
+#### Filtered Content Hooks
+```typescript
+// src/hooks/useFilterState.ts & useFilteredMovies.ts
+import { useState, useMemo } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+
+export const useFilterState = () => {
+  // ... state management for filters ...
+};
+
+export const useInfiniteFilteredMovies = (filters: FilterOptions, enabled: boolean) => {
+  // ... fetches paginated filtered movies ...
+};
+
+export const useInfiniteFilteredTVShows = (filters: FilterOptions, enabled: boolean) => {
+  // ... fetches paginated filtered TV shows ...
 };
 ```
 
@@ -1225,6 +1342,7 @@ export type RootStackParamList = {
   Login: undefined;
   MainTabs: undefined;
   MovieDetails: { movieId: number };
+  Profile: undefined;
 };
 
 export type TabParamList = {
@@ -1281,6 +1399,7 @@ export default function AppNavigator() {
           <>
             <Stack.Screen name="MainTabs" component={TabNavigator} />
             <Stack.Screen name="MovieDetails" component={MovieDetailsScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
           </>
         )}
       </Stack.Navigator>
@@ -1437,156 +1556,3 @@ export class ValidationError extends Error {
   }
 }
 ```
-
-### Error Handling Utilities
-```typescript
-// src/utils/errorHandler.ts
-export const handleApiError = (error: any): never => {
-  if (error.response) {
-    // Server responded with error status
-    const status = error.response.status;
-    const message = error.response.data?.message || 'Server error';
-    
-    switch (status) {
-      case 401:
-        throw new ApiError('Authentication required', status);
-      case 403:
-        throw new ApiError('Access denied', status);
-      case 404:
-        throw new ApiError('Resource not found', status);
-      case 500:
-        throw new ApiError('Internal server error', status);
-      default:
-        throw new ApiError(message, status);
-    }
-  } else if (error.request) {
-    // Network error
-    throw new NetworkError();
-  } else {
-    // Other error
-    throw new Error('An unexpected error occurred');
-  }
-};
-
-export const getErrorMessage = (error: Error): string => {
-  const errorMessages: Record<string, string> = {
-    'Network connection failed': 'Please check your internet connection and try again',
-    'Authentication required': 'Please log in to continue',
-    'Access denied': 'You don\'t have permission to perform this action',
-    'Resource not found': 'The requested content could not be found',
-    'Internal server error': 'Something went wrong on our end. Please try again later',
-  };
-
-  return errorMessages[error.message] || 'An unexpected error occurred. Please try again.';
-};
-```
-
-## 📊 Data Models
-
-### Core Data Types
-```typescript
-// src/types/movie.ts
-export interface Movie {
-  id: number;
-  title: string;
-  overview: string;
-  poster_path: string;
-  backdrop_path: string;
-  release_date: string;
-  vote_average: number;
-  vote_count: number;
-  popularity: number;
-  adult: boolean;
-  video: boolean;
-  genre_ids: number[];
-}
-
-export interface MovieDetails extends Movie {
-  runtime: number;
-  genres: Genre[];
-  production_companies: ProductionCompany[];
-  spoken_languages: SpokenLanguage[];
-  budget: number;
-  revenue: number;
-  status: string;
-  tagline: string;
-}
-
-export interface Genre {
-  id: number;
-  name: string;
-}
-
-export interface ProductionCompany {
-  id: number;
-  name: string;
-  logo_path: string | null;
-  origin_country: string;
-}
-
-export interface SpokenLanguage {
-  english_name: string;
-  iso_639_1: string;
-  name: string;
-}
-
-export interface Video {
-  id: string;
-  key: string;
-  name: string;
-  site: string;
-  size: number;
-  type: string;
-  official: boolean;
-}
-```
-
-### User Data Types
-```typescript
-// src/types/user.ts
-export interface User {
-  uid: string;
-  email: string;
-  displayName?: string;
-  photoURL?: string;
-  emailVerified: boolean;
-}
-
-export interface UserPreferences {
-  favorites: Movie[];
-  watchlist: Movie[];
-  theme: 'light' | 'dark';
-  language: string;
-  notifications: boolean;
-}
-```
-
-### API Response Types
-```typescript
-// src/types/api.ts
-export interface ApiResponse<T> {
-  page: number;
-  results: T[];
-  total_pages: number;
-  total_results: number;
-}
-
-export interface ApiResult<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  page: number;
-  totalPages: number;
-  hasMore: boolean;
-}
-```
-
----
-
-For architecture details, see [docs/ARCHITECTURE.md](ARCHITECTURE.md).
-For development setup, see [docs/DEV_GUIDE.md](DEV_GUIDE.md).
-For coding standards, see [docs/CODING_STANDARDS.md](CODING_STANDARDS.md). 

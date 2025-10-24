@@ -2,6 +2,8 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Movie } from '../../types';
 
 interface GeminiState {
+  toggleState: boolean;
+  toggleGemini: boolean;
   searchResultMovies: Movie[] | null;
   searchResultMoviesNames: string[] | null;
   isFromGPTSearch: boolean;
@@ -10,6 +12,8 @@ interface GeminiState {
 }
 
 const initialState: GeminiState = {
+  toggleState: false,
+  toggleGemini: false,
   searchResultMovies: null,
   searchResultMoviesNames: null,
   isFromGPTSearch: false,
@@ -21,6 +25,12 @@ const geminiSlice = createSlice({
   name: 'gemini',
   initialState,
   reducers: {
+    toggleGPTSearch: (state) => {
+      state.toggleState = !state.toggleState;
+    },
+    toggleGeminiSearch: (state) => {
+      state.toggleGemini = !state.toggleGemini;
+    },
     setSearchResults: (state, action: PayloadAction<{
       movieNames: string[];
       movieResults: Movie[];
@@ -43,5 +53,5 @@ const geminiSlice = createSlice({
   },
 });
 
-export const { setSearchResults, clearSearchContext, setLoading } = geminiSlice.actions;
+export const { toggleGPTSearch, toggleGeminiSearch, setSearchResults, clearSearchContext, setLoading } = geminiSlice.actions;
 export default geminiSlice.reducer; 

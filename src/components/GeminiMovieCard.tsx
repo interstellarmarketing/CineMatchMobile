@@ -1,18 +1,19 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
+  TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { IMG_CDN_URL, MOVIE_BANNER } from '../utils/constants';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { IMG_CDN_URL, MOVIE_BANNER, COLORS } from '../utils/constants';
 import FavoriteButton from './FavoriteButton';
 import WatchlistButton from './WatchlistButton';
 import { Movie } from '../types';
 
-const { width } = Dimensions.get('window');
-const cardWidth = (width - 60) / 2; // 60 = padding + gaps
+const { width: screenWidth } = Dimensions.get('window');
 
 interface GeminiMovieCardProps {
   movie: Movie;
@@ -20,117 +21,123 @@ interface GeminiMovieCardProps {
 
 const GeminiMovieCard: React.FC<GeminiMovieCardProps> = ({ movie }) => {
   const isMovie = movie.media_type === 'movie' || !!movie.title;
-  const rating = movie.vote_average?.toFixed(1);
+  const imageSource = movie.poster_path ? `${IMG_CDN_URL}${movie.poster_path}` : MOVIE_BANNER;
+  
+  const cardStyle = useMemo(() => ({
+    width: (screenWidth - 48) / 2, // Calculate for 2-column grid (48 = 16px padding * 2 + 16px gap)
+    marginBottom: 2, // Reduced bottom margin for tighter spacing
+  }), []);
 
   return (
-    <View style={[styles.container, { width: cardWidth }]}>
+    <View style={[styles.container, cardStyle]}>
       <Image
-        source={{
-          uri: movie.poster_path ? `${IMG_CDN_URL}${movie.poster_path}` : MOVIE_BANNER,
-        }}
         style={styles.poster}
-        resizeMode="cover"
+        source={imageSource}
+        placeholder={'L6PZfSi_.AyE_3ofx[a04_a_s;jP'}
+        contentFit="cover"
+        transition={300}
       />
-      
-      {/* Type Badge */}
-      <View style={styles.typeBadge}>
-        <Text style={styles.typeText}>{isMovie ? 'Movie' : 'TV'}</Text>
-      </View>
-
-      {/* Bottom Overlay with Rating and Watchlist */}
-      <View style={styles.bottomOverlay}>
-        <Text style={styles.ratingText}>⭐ {rating}</Text>
-        <View style={styles.watchlistContainer}>
-          <WatchlistButton media={movie} size="sm" />
-        </View>
-      </View>
-
-      {/* Favorite Button */}
       <View style={styles.favoriteContainer}>
-        <FavoriteButton media={movie} size="sm" />
+        <FavoriteButton media={movie} size="xs" />
       </View>
-
-      {/* Title Overlay */}
-      <View style={styles.titleOverlay}>
-        <Text style={styles.titleText} numberOfLines={2}>
-          {isMovie ? movie.title : movie.name}
+      <View style={styles.badgeContainer}>
+        <Text style={styles.badgeText}>
+          {isMovie ? 'MOVIE' : 'TV'}
         </Text>
       </View>
+      
+      {/* Bottom gradient overlay */}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.9)']}
+        style={styles.gradientOverlay}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      >
+        <View style={styles.overlayContent}>
+          <View style={styles.ratingContainer}>
+            <Text style={styles.imdbLogo}>IMDb</Text>
+            <Text style={styles.rating}>{(movie.vote_average || 0).toFixed(1)}</Text>
+          </View>
+          <View style={styles.watchlistContainer}>
+            <WatchlistButton media={movie} size="xs" />
+          </View>
+        </View>
+      </LinearGradient>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    aspectRatio: 2/3,
-    borderRadius: 12,
+    borderRadius: 8,
+    backgroundColor: COLORS.surface,
     overflow: 'hidden',
-    marginHorizontal: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   poster: {
-    width: '100%',
-    height: '100%',
-  },
-  typeBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  typeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  bottomOverlay: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    right: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  ratingText: {
-    color: '#fbbf24',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  watchlistContainer: {
-    paddingRight: 0,
+    aspectRatio: 2 / 3,
   },
   favoriteContainer: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 4,
+    right: 4,
   },
-  titleOverlay: {
+  badgeContainer: {
     position: 'absolute',
-    bottom: 40,
+    top: 8,
     left: 8,
-    right: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 4,
   },
-  titleText: {
+  badgeText: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 6,
+    paddingBottom: 4,
+  },
+  overlayContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  imdbLogo: {
+    backgroundColor: '#F5C518',
+    color: '#000',
+    fontSize: 8,
+    fontWeight: 'bold',
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderRadius: 2,
+    marginRight: 3,
+  },
+  rating: {
+    color: '#fff',
+    fontSize: 10,
     fontWeight: '600',
-    textAlign: 'center',
+  },
+  watchlistContainer: {
+    // Positioned at bottom right via parent flexbox
+    marginBottom: -7,
+    marginRight: -2,
   },
 });
 

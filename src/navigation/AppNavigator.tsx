@@ -1,12 +1,11 @@
-import React, { Suspense, useRef, useCallback, useMemo, createContext } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator, NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSelector, shallowEqual } from 'react-redux';
-import { RootState, Movie } from '../types';
+import { RootState } from '../types';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { performanceMonitor } from '../utils/performanceMonitor';
-import { Text, View, StyleSheet } from 'react-native';
 import { COLORS } from '../utils/constants';
 
 // Import screens
@@ -17,60 +16,20 @@ import MovieDetailsScreen from '../screens/MovieDetailsScreen';
 import LoginScreen from '../screens/LoginScreen';
 import GeminiSearchScreen from '../screens/GeminiSearchScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-
-// Import hooks and types
-import usePreferences from '../hooks/usePreferences';
+import MyListsScreen from '../screens/MyListsScreen';
 
 // Define Param List for Stack Navigator
 type RootStackParamList = {
   Login: undefined;
   MainTabs: undefined;
-  MovieDetails: { a: string };
+  MovieDetails: { movieId: number; mediaType?: 'movie' | 'tv' };
   GeminiSearch: undefined;
   Profile: undefined;
   Search: undefined;
 };
 
-// Create Preferences Context
-export const PreferencesContext = createContext<{
-  favorites: Movie[];
-  watchlist: Movie[];
-  toggleFavorite: (movie: Movie) => void;
-  toggleWatchlist: (movie: Movie) => void;
-}>({
-  favorites: [],
-  watchlist: [],
-  toggleFavorite: () => {},
-  toggleWatchlist: () => {},
-});
-
-// Preferences Provider Component
-const PreferencesProvider = ({ children }: { children: React.ReactNode }) => {
-  const preferences = usePreferences();
-  return (
-    <PreferencesContext.Provider value={preferences}>
-      {children}
-    </PreferencesContext.Provider>
-  );
-};
-
-// Lazy loaded screens with better error boundaries
-const MyListsScreen = React.lazy(() => import('../screens/MyListsScreen'));
-
-// Loading component for lazy screens
-const LazyScreenLoading = () => (
-  <View style={styles.loadingContainer}>
-    <Text style={styles.loadingText}>Loading...</Text>
-  </View>
-);
-
-LazyScreenLoading.displayName = 'LazyScreenLoading';
-
-const MyListsScreenWrapper = () => (
-  <Suspense fallback={<LazyScreenLoading />}>
-    <MyListsScreen />
-  </Suspense>
-);
+// Direct component wrapper for MyListsScreen
+const MyListsScreenWrapper = () => <MyListsScreen />;
 
 // Bottom Tab Navigator with performance optimizations
 const TabNavigator = React.memo(() => {
@@ -78,7 +37,7 @@ const TabNavigator = React.memo(() => {
   const tabBarOptions = useMemo(() => ({
     headerShown: false,
     tabBarStyle: {
-      backgroundColor: COLORS.background,
+      backgroundColor: COLORS.JW_BOTTOM_BG,
       borderTopColor: '#333',
       borderTopWidth: 1,
     },
@@ -151,7 +110,7 @@ TabNavigator.displayName = 'TabNavigator';
 export default function AppNavigator() {
   const Stack = createNativeStackNavigator<RootStackParamList>();
   const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
-  const routeNameRef = useRef<string>();
+  const routeNameRef = useRef<string>('');
   const navigationStartTime = useRef<number>(0);
 
   // Optimized Redux selector - memoized with shallowEqual
@@ -188,7 +147,7 @@ export default function AppNavigator() {
   // Enhanced navigation performance monitoring
   const onReady = useCallback(() => {
     const currentRoute = navigationRef.current?.getCurrentRoute();
-    routeNameRef.current = currentRoute?.name;
+    routeNameRef.current = currentRoute?.name || '';
     
     // Preload screens after navigation is ready
     preloadScreens();
@@ -222,7 +181,7 @@ export default function AppNavigator() {
       }
     }
     
-    routeNameRef.current = currentRouteName;
+    routeNameRef.current = currentRouteName || '';
   }, []);
 
   // Track navigation start timing
@@ -232,8 +191,6 @@ export default function AppNavigator() {
     animation: 'slide_from_right',
     animationDuration: 200,
     gestureEnabled: true,
-    // Optimize memory usage
-    detachPreviousScreen: true,
   }), []);
 
   return (
@@ -242,7 +199,6 @@ export default function AppNavigator() {
       onReady={onReady}
       onStateChange={onStateChange}
     >
-      <PreferencesProvider>
         <Stack.Navigator screenOptions={navigationOptions}>
           {!user ? (
             <Stack.Screen name="Login" component={LoginScreen} />
@@ -260,10 +216,6 @@ export default function AppNavigator() {
               <Stack.Screen 
                 name="GeminiSearch" 
                 component={GeminiSearchScreen}
-                options={{
-                  presentation: 'modal',
-                  animationTypeForReplace: 'push',
-                }}
               />
               <Stack.Screen 
                 name="Profile" 
@@ -284,20 +236,8 @@ export default function AppNavigator() {
             </>
           )}
         </Stack.Navigator>
-      </PreferencesProvider>
     </NavigationContainer>
   );
 }
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  loadingText: {
-    color: COLORS.text,
-    fontSize: 16,
-  },
-}); 
+ 

@@ -19,10 +19,34 @@ export interface Movie {
   release_date?: string;
   first_air_date?: string;
   vote_average?: number;
+  vote_count?: number;
+  popularity?: number;
   media_type?: 'movie' | 'tv';
   poster_path?: string;
   overview?: string;
   backdrop_path?: string;
+  genre_ids?: number[];
+}
+
+export interface StreamingChartMovie extends Movie {
+  rank?: number;
+  trend_direction?: 'up' | 'down' | 'stable';
+  provider_name?: string;
+  media_type?: 'movie' | 'tv';
+}
+
+export interface TVShow {
+  id: number;
+  name: string;
+  first_air_date?: string;
+  vote_average?: number;
+  vote_count?: number;
+  popularity?: number;
+  media_type?: 'tv';
+  poster_path?: string;
+  overview?: string;
+  backdrop_path?: string;
+  genre_ids?: number[];
 }
 
 export interface MovieDetails extends Movie {
@@ -99,9 +123,10 @@ export interface RouteParams {
 
 // Component prop interfaces
 export interface MovieCardProps {
-  poster_path?: string;
   movie: Movie;
+  poster_path?: string;
   onPress?: (movie: Movie) => void;
+  width?: number;
 }
 
 export interface MovieListProps {
@@ -118,6 +143,19 @@ export interface FavoriteButtonProps {
 export interface WatchlistButtonProps {
   media: Movie;
   size?: '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+}
+
+// Streaming service types
+export interface StreamingOption {
+  name: string;
+  type?: string;
+}
+
+export interface StreamingProvider {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string;
+  _streamType?: string;
 }
 
 // Hook return types

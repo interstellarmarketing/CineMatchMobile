@@ -1,43 +1,28 @@
-import React, { useCallback, useMemo, useContext } from 'react';
+import React from 'react';
 import { TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useSelector } from 'react-redux';
-import { RootState, Movie, FavoriteButtonProps } from '../types';
-import { PreferencesContext } from '../navigation/AppNavigator';
+import { RootState, FavoriteButtonProps } from '../types';
+import usePreferences from '../hooks/usePreferences';
 
 const sizeMap = {
-  '2xs': 18,
-  'xs': 20,
+  'xs': 18,
   'sm': 24,
-  'md': 28,
   'lg': 32,
-  'xl': 36,
 };
 
 const FavoriteButton: React.FC<FavoriteButtonProps> = React.memo(({ media, size = 'sm' }) => {
-  const { favorites, toggleFavorite } = useContext(PreferencesContext);
-  const favorited = useMemo(() => favorites.some(item => item.id === media.id), [favorites, media.id]);
+  const { favorites, toggleFavorite } = usePreferences();
+  const isFavorited = favorites.some(item => item.id === media.id);
   const isLoading = useSelector((state: RootState) => state.preferences.isLoading);
 
-  const iconSize = useMemo(() => sizeMap[size], [size]);
-  
-  const iconColor = useMemo(() => 
-    favorited ? '#ef4444' : '#ffffff', 
-    [favorited]
-  );
-  
-  const iconName = useMemo(() => 
-    favorited ? 'favorite' : 'favorite-border', 
-    [favorited]
-  );
-
-  const handlePress = useCallback(() => {
-    toggleFavorite(media);
-  }, [toggleFavorite, media]);
+  const iconSize = sizeMap[size];
+  const iconColor = isFavorited ? '#ef4444' : '#ffffff';
+  const iconName = isFavorited ? 'favorite' : 'favorite-border';
 
   return (
     <TouchableOpacity
-      onPress={handlePress}
+      onPress={() => toggleFavorite(media)}
       style={styles.button}
       activeOpacity={0.7}
       disabled={isLoading}
@@ -61,10 +46,6 @@ FavoriteButton.displayName = 'FavoriteButton';
 const styles = StyleSheet.create({
   button: {
     padding: 4,
-    minWidth: 32,
-    minHeight: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   icon: {
     textShadowColor: 'rgba(0, 0, 0, 0.75)',

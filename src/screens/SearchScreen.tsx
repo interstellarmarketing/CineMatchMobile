@@ -26,9 +26,10 @@ const SearchScreen = () => {
   }, [updateQuery]);
 
   const handleMoviePress = useCallback((movie: Movie) => {
+    const mediaType = movie.media_type || (movie.title ? 'movie' : 'tv');
     navigation.navigate('MovieDetails' as never, { 
       movieId: movie.id, 
-      movie 
+      mediaType 
     } as never);
   }, [navigation]);
 

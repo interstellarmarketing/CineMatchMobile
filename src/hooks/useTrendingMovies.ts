@@ -4,7 +4,7 @@ import { Movie, ApiResponse } from '../types';
 
 const fetchTrendingMovies = async (): Promise<Movie[]> => {
   const response = await fetch(
-    `${BASE_URL}/trending/movie/week?language=en-US`,
+    `${BASE_URL}/trending/movie/week?language=en-US&region=US`,
     API_OPTIONS
   );
   if (!response.ok) {

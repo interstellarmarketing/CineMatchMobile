@@ -8,6 +8,11 @@ export const LOGO_ASSETS = {
   alt: 'logo-alt.svg',
 };
 
+// Hero image for homepage
+export const HERO_ASSETS = {
+  frogNetflix: require('./frog-netflix.png'),
+};
+
 // Logo dimensions for reference
 export const LOGO_DIMENSIONS = {
   main: { width: 551.08, height: 148 },

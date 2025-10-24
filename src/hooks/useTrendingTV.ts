@@ -4,13 +4,15 @@ import { TVShow, ApiResponse } from '../types';
 
 const fetchTrendingTV = async (): Promise<TVShow[]> => {
   const response = await fetch(
-    `${BASE_URL}/trending/tv/week?language=en-US`,
+    `${BASE_URL}/trending/tv/week?language=en-US&region=US`,
     API_OPTIONS
   );
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
   const data: ApiResponse<TVShow> = await response.json();
+
+  // Return the raw, unfiltered list from TMDB
   return data.results;
 };
 

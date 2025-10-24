@@ -53,25 +53,34 @@ CineMatchMobile/
 │   │   ├── LoginScreen.tsx         # Authentication
 │   │   ├── MovieDetailsScreen.tsx  # Movie details
 │   │   ├── MyListsScreen.tsx       # User collections
-│   │   └── SearchScreen.tsx        # Search functionality
+│   │   ├── SearchScreen.tsx        # Search functionality
+│   │   └── ProfileScreen.tsx       # User profile and settings
 │   ├── navigation/                 # React Navigation setup
 │   │   └── AppNavigator.tsx        # Main navigation configuration
 │   ├── hooks/                      # Custom React hooks
 │   │   ├── useAuth.ts              # Authentication hook
 │   │   ├── useMovieDetails.ts      # Movie details hook
-│   │   ├── useMovieTrailer.ts      # Movie trailer hook
 │   │   ├── usePopularMovies.ts     # Popular movies hook
 │   │   ├── usePreferences.ts       # Centralized hook for user preferences (favorites, watchlist)
 │   │   ├── useSearchMovies.ts      # Search functionality hook
 │   │   ├── useTopRatedMovies.ts    # Top rated movies hook
 │   │   ├── useTrendingMovies.ts    # Trending movies hook
-│   │   └── useUpcomingMovies.ts    # Upcoming movies hook
+│   │   ├── useUpcomingMovies.ts    # Upcoming movies hook
+│   │   ├── usePopularTV.ts         # Popular TV shows hook
+│   │   ├── useTopRatedTV.ts      # Top rated TV shows hook
+│   │   ├── useTrendingTV.ts      # Trending TV shows hook
+│   │   ├── useUpcomingTV.ts      # Upcoming TV shows hook
+│   │   ├── useTrailers.ts          # Generic trailer hook for movies and TV
+│   │   ├── useWatchProviders.ts    # Hook for streaming providers
+│   │   ├── useFilteredMovies.ts    # Advanced filtering hook
+│   │   └── useFilterState.ts       # State management for filters
 │   ├── utils/                      # Utilities and configurations
 │   │   ├── slices/                 # Redux Toolkit slices
 │   │   │   ├── detailsSlice.ts     # Movie details state
 │   │   │   ├── moviesSlice.ts      # Movies data state
 │   │   │   ├── preferencesSlice.ts # User preferences state
 │   │   │   └── userSlice.ts        # User authentication state
+│   │   ├── tvShowsSlice.ts         # TV shows data state
 │   │   ├── authService.ts          # Authentication service
 │   │   ├── constants.ts            # App constants and configuration
 │   │   ├── firebase.ts             # Firebase configuration
@@ -149,6 +158,7 @@ CineMatchMobile/
 - **MovieDetailsScreen.tsx** - Detailed movie information
 - **LoginScreen.tsx** - User authentication interface
 - **MyListsScreen.tsx** - User collections and favorites
+- **ProfileScreen.tsx** - User profile, settings, and logout
 
 #### Screen Structure Pattern
 ```typescript
@@ -316,6 +326,14 @@ interface RootState {
     loading: boolean;
     error: string | null;
   };
+  tvShows: {
+    popularTV: TVShow[];
+    topRatedTV: TVShow[];
+    trendingTV: TVShow[];
+    upcomingTV: TVShow[];
+    loading: boolean;
+    error: string | null;
+  };
 }
 ```
 
@@ -409,6 +427,46 @@ const moviesSlice = createSlice({
 });
 ```
 
+#### TV Shows Slice
+```typescript
+// src/utils/slices/tvShowsSlice.ts
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+
+export const fetchPopularTVShows = createAsyncThunk(
+  'tvShows/fetchPopular',
+  async () => {
+    // TMDB API call for popular TV shows
+  }
+);
+
+const tvShowsSlice = createSlice({
+  name: 'tvShows',
+  initialState: {
+    popularTV: [],
+    topRatedTV: [],
+    trendingTV: [],
+    upcomingTV: [],
+    loading: false,
+    error: null,
+  },
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchPopularTVShows.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchPopularTVShows.fulfilled, (state, action) => {
+        state.loading = false;
+        state.popularTV = action.payload;
+      })
+      .addCase(fetchPopularTVShows.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+  },
+});
+```
+
 ### State Persistence
 
 ```typescript
@@ -431,6 +489,7 @@ export const store = configureStore({
     movies: moviesReducer,
     details: detailsReducer,
     preferences: persistedPreferencesReducer,
+    tvShows: tvShowsReducer, // Add tvShowsReducer to the store
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -588,7 +647,8 @@ AppNavigator
     ├── HomeScreen
     ├── BrowseScreen
     ├── SearchScreen
-    └── MyListsScreen
+    ├── MyListsScreen
+    └── ProfileScreen
         └── MovieDetailsScreen (modal)
 ```
 
@@ -619,6 +679,7 @@ function TabNavigator() {
       <Tab.Screen name="Browse" component={BrowseScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
       <Tab.Screen name="MyLists" component={MyListsScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
@@ -929,6 +990,11 @@ const handleAPIError = (error: any) => {
 - Database optimization and indexing
 - Caching strategies
 
+### TV Show Integration
+- Support for browsing, searching, and viewing TV shows
+- Separate hooks for fetching TV show data
+- Unified `Movie` type to handle both movies and TV shows for simplicity
+
 ### Maintainability
 - Monorepo structure with shared code
 - Comprehensive test coverage
@@ -953,6 +1019,7 @@ The application's state is centralized in a Redux store, following the principle
 
 *   `userSlice`: Manages user authentication state, including user profile information.
 *   `moviesSlice`: Caches movie data fetched from the TMDB API, such as trending, popular, and upcoming movies.
+*   `tvShowsSlice`: Caches TV show data fetched from the TMDB API.
 *   `preferencesSlice`: Manages user-specific data like favorites and watchlists. This slice is architected for high performance and offline-first functionality.
 
 **State Synchronization with Firestore:**
@@ -1016,7 +1083,42 @@ This architecture significantly improves perceived performance by eliminating ne
 
 ```typescript
 // Store configuration
-// ... existing code ...
+interface RootState {
+  user: {
+    currentUser: User | null;
+    isAuthenticated: boolean;
+    loading: boolean;
+    error: string | null;
+  };
+  movies: {
+    trending: Movie[];
+    popular: Movie[];
+    topRated: Movie[];
+    upcoming: Movie[];
+    loading: boolean;
+    error: string | null;
+  };
+  details: {
+    currentMovie: MovieDetails | null;
+    trailer: Video | null;
+    loading: boolean;
+    error: string | null;
+  };
+  preferences: {
+    favorites: Movie[];
+    watchlist: Movie[];
+    loading: boolean;
+    error: string | null;
+  };
+  tvShows: {
+    popularTV: TVShow[];
+    topRatedTV: TVShow[];
+    trendingTV: TVShow[];
+    upcomingTV: TVShow[];
+    loading: boolean;
+    error: string | null;
+  };
+}
 ```
 
 This replaces the previous pattern where each `FavoriteButton` press would trigger its own asynchronous thunk and individual Firestore write, which caused significant UI blocking and performance degradation.
@@ -1025,12 +1127,130 @@ This replaces the previous pattern where each `FavoriteButton` press would trigg
 
 #### User Slice
 ```typescript
-// ... existing code ...
+// src/utils/slices/userSlice.ts
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+
+export const signInUser = createAsyncThunk(
+  'user/signIn',
+  async (credentials: { email: string; password: string }) => {
+    // Firebase authentication logic
+  }
+);
+
+const userSlice = createSlice({
+  name: 'user',
+  initialState: {
+    currentUser: null,
+    isAuthenticated: false,
+    loading: false,
+    error: null,
+  },
+  reducers: {
+    clearError: (state) => {
+      state.error = null;
+    },
+    signOut: (state) => {
+      state.currentUser = null;
+      state.isAuthenticated = false;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(signInUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(signInUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.currentUser = action.payload;
+        state.isAuthenticated = true;
+      })
+      .addCase(signInUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+  },
+});
 ```
 
 #### Movies Slice
 ```typescript
-// ... existing code ...
+// src/utils/slices/moviesSlice.ts
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+
+export const fetchTrendingMovies = createAsyncThunk(
+  'movies/fetchTrending',
+  async () => {
+    // TMDB API call
+  }
+);
+
+const moviesSlice = createSlice({
+  name: 'movies',
+  initialState: {
+    trending: [],
+    popular: [],
+    topRated: [],
+    upcoming: [],
+    loading: false,
+    error: null,
+  },
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchTrendingMovies.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchTrendingMovies.fulfilled, (state, action) => {
+        state.loading = false;
+        state.trending = action.payload;
+      })
+      .addCase(fetchTrendingMovies.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+  },
+});
+```
+
+#### TV Shows Slice
+```typescript
+// src/utils/slices/tvShowsSlice.ts
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+
+export const fetchPopularTVShows = createAsyncThunk(
+  'tvShows/fetchPopular',
+  async () => {
+    // TMDB API call for popular TV shows
+  }
+);
+
+const tvShowsSlice = createSlice({
+  name: 'tvShows',
+  initialState: {
+    popularTV: [],
+    topRatedTV: [],
+    trendingTV: [],
+    upcomingTV: [],
+    loading: false,
+    error: null,
+  },
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchPopularTVShows.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchPopularTVShows.fulfilled, (state, action) => {
+        state.loading = false;
+        state.popularTV = action.payload;
+      })
+      .addCase(fetchPopularTVShows.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+  },
+});
 ```
 
 ---

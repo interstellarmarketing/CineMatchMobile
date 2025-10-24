@@ -1,125 +1,104 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
   Image,
+  TouchableOpacity,
+  Dimensions,
+  ScrollView,
+  Animated,
 } from 'react-native';
-import { useSelector, useDispatch } from 'react-redux';
-import { shallowEqual } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { RootState } from '../types';
-import { COLORS, IMG_CDN_URL } from '../utils/constants';
-import MovieList from '../components/MovieList';
-import LoadingSpinner from '../components/LoadingSpinner';
-import ErrorMessage from '../components/ErrorMessage';
-import { useTrendingMovies } from '../hooks/useTrendingMovies';
-import { Movie } from '../types';
-import Logo from '../components/Logo';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS } from '../utils/constants';
+import { HERO_ASSETS } from '../assets/images';
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const HomeScreen = () => {
-  const dispatch = useDispatch();
   const navigation = useNavigation();
-  
-  // Optimized Redux selector - single selector with shallowEqual
-  const { user, isLoading } = useSelector((state: RootState) => ({
-    user: state.user.user,
-    isLoading: state.user.isLoading,
-  }), shallowEqual);
-  
-  const { movies: trendingMovies, loading, error } = useTrendingMovies();
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
-  // Image preloading for better performance
   useEffect(() => {
-    if (trendingMovies.length > 0) {
-      const preloadImages = async () => {
-        const imagePromises = trendingMovies.slice(0, 10).map(movie => 
-          Image.prefetch(`${IMG_CDN_URL}${movie.poster_path}`)
-        );
-        try {
-          await Promise.all(imagePromises);
-        } catch (error) {
-          // Silently handle image preload errors
-          console.warn('Image preload failed:', error);
-        }
-      };
-      preloadImages();
-    }
-  }, [trendingMovies]);
+    // Start shimmer animation
+    const shimmerAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+    shimmerAnimation.start();
 
-  const handleMoviePress = useCallback((movie: Movie) => {
-    navigation.navigate('MovieDetails' as never, { 
-      movieId: movie.id, 
-      movie 
-    } as never);
-  }, [navigation]);
+    return () => shimmerAnimation.stop();
+  }, [shimmerAnim]);
 
-  const handleFeedMeContent = useCallback(() => {
-    navigation.navigate('GeminiSearch' as never);
-  }, [navigation]);
-
-  const handleProfilePress = useCallback(() => {
-    navigation.navigate('Profile' as never);
-  }, [navigation]);
-
-  const handleSearchPress = useCallback(() => {
+  const handleGeminiSearch = () => {
     navigation.navigate('Search' as never);
-  }, [navigation]);
+  };
+
+  const shimmerOpacity = shimmerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.3],
+  });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <Logo size="medium" style={styles.logo} />
-            <View style={styles.headerButtons}>
-              <TouchableOpacity style={styles.headerButton} onPress={handleSearchPress}>
-                <Icon name="search" size={24} color={COLORS.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.headerButton} onPress={handleProfilePress}>
-                <Icon name="person" size={24} color={COLORS.primary} />
-              </TouchableOpacity>
-            </View>
-          </View>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.heroContainer}>
+        {/* Hero spotlight effect */}
+        <View style={styles.heroSpotlight} />
+        
+        {/* Hero image */}
+        <View style={styles.heroImageContainer}>
+          <Image
+            source={HERO_ASSETS.frogNetflix}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
         </View>
-
-        <View style={styles.content}>
-          
-          <Text style={styles.description}>
-            Too Stupid to Choose a Show? Let AI Do It.
-          </Text>
-
-          <TouchableOpacity style={styles.ctaButton} onPress={handleFeedMeContent}>
+        
+        {/* Hero heading */}
+        <Text style={styles.heroHeading}>
+          Too Stupid to Choose a Show?{'\n'}Let AI Do It.
+        </Text>
+        
+        {/* CTA Button */}
+        <TouchableOpacity
+          style={styles.ctaButtonContainer}
+          onPress={handleGeminiSearch}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={['#3B82F6', '#8B5CF6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.ctaButton}
+          >
+            <Icon name="auto-awesome" size={24} color="#FFFFFF" />
             <Text style={styles.ctaButtonText}>Feed Me Content</Text>
-          </TouchableOpacity>
-
-          {/* Trending Movies Section */}
-          <View style={styles.moviesSection}>
-            {loading ? (
-              <LoadingSpinner message="Loading trending movies..." />
-            ) : error ? (
-              <ErrorMessage message={`Error loading movies: ${error}`} />
-            ) : (
-              <MovieList
-                title="Trending Now"
-                movies={trendingMovies}
-                onMoviePress={handleMoviePress}
-                loading={loading}
-              />
-            )}
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          </LinearGradient>
+          <Animated.View 
+            style={[
+              styles.shimmerOverlay,
+              { opacity: shimmerOpacity }
+            ]} 
+          />
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 };
 
@@ -128,65 +107,100 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  scrollContent: {
+  contentContainer: {
     flexGrow: 1,
-    padding: 20,
-  },
-  header: {
-    marginBottom: 30,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  headerButton: {
-    backgroundColor: COLORS.surface,
-    padding: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  logo: {
-    // Logo styling handled by Logo component
-  },
-  content: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    paddingVertical: 40,
   },
-  description: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
+  heroContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    maxWidth: 500,
+  },
+  heroSpotlight: {
+    position: 'absolute',
+    top: screenHeight * 0.25,
+    left: screenWidth * 0.5,
+    width: Math.min(320, screenWidth * 0.6),
+    height: Math.min(320, screenWidth * 0.6),
+    backgroundColor: 'rgba(79, 154, 255, 0.2)',
+    borderRadius: Math.min(320, screenWidth * 0.6) / 2,
+    transform: [
+      { translateX: -Math.min(320, screenWidth * 0.6) / 2 },
+      { translateY: -Math.min(320, screenWidth * 0.6) / 2 }
+    ],
+    zIndex: 0,
+  },
+  heroImageContainer: {
+    width: screenWidth,
+    height: screenHeight * 0.5,
+    zIndex: 10,
+    shadowColor: '#4f9aff',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroHeading: {
+    fontSize: Math.min(40, screenWidth * 0.1),
+    fontWeight: '700',
+    color: '#FFFFFF',
     textAlign: 'center',
+    marginTop: 20,
     marginBottom: 40,
-    lineHeight: 24,
+    lineHeight: Math.min(48, screenWidth * 0.12),
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+    letterSpacing: -0.02,
+  },
+  ctaButtonContainer: {
+    borderRadius: 12,
+    shadowColor: '#6366f1',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 8,
+    position: 'relative',
   },
   ctaButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 16,
+    paddingHorizontal: 32,
     borderRadius: 12,
-    elevation: 3,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    gap: 8,
   },
   ctaButtonText: {
-    color: COLORS.text,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
+    color: '#FFFFFF',
   },
-  moviesSection: {
-    marginTop: 40,
-    width: '100%',
+  shimmerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    zIndex: 1,
   },
 });
 

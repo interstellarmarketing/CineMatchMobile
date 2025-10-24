@@ -1,115 +1,57 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  ActivityIndicator,
-} from 'react-native';
-import { IMG_CDN_URL, MOVIE_BANNER } from '../utils/constants';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MovieCardProps } from '../types';
+import { IMG_CDN_URL, COLORS, SERIES_BANNER } from '../utils/constants';
 import FavoriteButton from './FavoriteButton';
 import WatchlistButton from './WatchlistButton';
-import { TVShow } from '../types';
 
-const { width } = Dimensions.get('window');
-const cardWidth = (width - 24) / 2;
+const { width: screenWidth } = Dimensions.get('window');
 
-// Memoized image component for better performance
-const TVImage = React.memo(({ imageUri, onError }: { imageUri: string; onError: () => void }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-
-  const handleLoadEnd = useCallback(() => {
-    setIsLoading(false);
-  }, []);
-
-  const handleError = useCallback(() => {
-    setIsLoading(false);
-    setHasError(true);
-    onError();
-  }, [onError]);
-
-  const imageSource = hasError ? MOVIE_BANNER : { uri: imageUri };
+const TVCard: React.FC<MovieCardProps> = React.memo(({ movie, onPress, width }) => {
+  const imageSource = movie.poster_path ? `${IMG_CDN_URL}${movie.poster_path}` : SERIES_BANNER;
+  
+  const cardStyle = useMemo(() => ({
+    width: width || (screenWidth - 48) / 2, // Use passed width or calculate for 2-column grid (48 = 16px padding * 2 + 16px gap)
+    marginBottom: 2, // Reduced bottom margin for tighter spacing
+  }), [width]);
 
   return (
-    <View style={styles.imageContainer}>
+    <TouchableOpacity style={[styles.container, cardStyle]} onPress={() => onPress?.(movie)}>
       <Image
-        source={imageSource}
         style={styles.poster}
-        resizeMode="cover"
-        fadeDuration={150}
-        onLoadEnd={handleLoadEnd}
-        onError={handleError}
+        source={imageSource}
+        placeholder={'L6PZfSi_.AyE_3ofx[a04_a_s;jP'}
+        contentFit="cover"
+        transition={300}
       />
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="small" color="#ffffff" />
-        </View>
-      )}
-    </View>
-  );
-});
-
-TVImage.displayName = 'TVImage';
-
-interface TVCardProps {
-  show: TVShow;
-  onPress?: (show: TVShow) => void;
-}
-
-const TVCard: React.FC<TVCardProps> = React.memo(({ show, onPress }) => {
-  const [imageError, setImageError] = useState(false);
-
-  const rating = useMemo(() => show.vote_average?.toFixed(1), [show.vote_average]);
-  const imageUri = useMemo(() => {
-    if (imageError || !show.poster_path) {
-      return null;
-    }
-    return `${IMG_CDN_URL}${show.poster_path}`;
-  }, [show.poster_path, imageError]);
-
-  const handlePress = useCallback(() => {
-    onPress?.(show);
-  }, [onPress, show]);
-
-  const handleImageError = useCallback(() => {
-    setImageError(true);
-  }, []);
-
-  return (
-    <TouchableOpacity
-      style={styles.container}
-      onPress={handlePress}
-      activeOpacity={0.8}
-    >
-      {imageUri ? (
-        <TVImage imageUri={imageUri} onError={handleImageError} />
-      ) : (
-        <Image
-          source={MOVIE_BANNER}
-          style={styles.poster}
-          resizeMode="cover"
-        />
-      )}
-      {/* Type Badge */}
-      <View style={styles.typeBadge}>
-        <Text style={styles.typeText}>TV</Text>
-      </View>
-      {/* IMDb Badge */}
-      <View style={styles.imdbBadge}>
-        <Text style={styles.imdbText}>IMDb</Text>
-        <Text style={styles.imdbRating}>{rating}</Text>
-      </View>
-      {/* Watchlist Button (bottom right) */}
-      <View style={styles.watchlistContainer}>
-        <WatchlistButton media={show} size="sm" />
-      </View>
-      {/* Favorite Button (top right) */}
       <View style={styles.favoriteContainer}>
-        <FavoriteButton media={show} size="sm" />
+        <FavoriteButton media={movie} size="xs" />
       </View>
+      <View style={styles.badgeContainer}>
+        <Text style={styles.badgeText}>TV</Text>
+      </View>
+      
+      {/* Bottom gradient overlay */}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.9)']}
+        style={styles.gradientOverlay}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      >
+        <View style={styles.overlayContent}>
+          <View style={styles.ratingContainer}>
+            <Text style={styles.imdbLogo}>IMDb</Text>
+            <Text style={styles.rating}>{(movie.vote_average || 0).toFixed(1)}</Text>
+          </View>
+          <View style={styles.watchlistContainer}>
+            <WatchlistButton media={movie} size="xs" />
+          </View>
+        </View>
+      </LinearGradient>
+      
+
     </TouchableOpacity>
   );
 });
@@ -118,86 +60,75 @@ TVCard.displayName = 'TVCard';
 
 const styles = StyleSheet.create({
   container: {
-    width: cardWidth,
-    aspectRatio: 2/3,
     borderRadius: 8,
+    backgroundColor: COLORS.surface,
     overflow: 'hidden',
-    marginHorizontal: 2,
-    marginBottom: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 2,
-    elevation: 2,
-    backgroundColor: '#181A20',
-  },
-  imageContainer: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   poster: {
-    width: '100%',
-    height: '100%',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  typeBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  typeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  imdbBadge: {
-    position: 'absolute',
-    left: 8,
-    bottom: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5C518',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    zIndex: 2,
-  },
-  imdbText: {
-    color: '#222',
-    fontWeight: 'bold',
-    fontSize: 10,
-    marginRight: 2,
-  },
-  imdbRating: {
-    color: '#222',
-    fontWeight: 'bold',
-    fontSize: 10,
-  },
-  watchlistContainer: {
-    position: 'absolute',
-    right: 8,
-    bottom: 8,
-    zIndex: 2,
+    aspectRatio: 2 / 3,
   },
   favoriteContainer: {
     position: 'absolute',
+    top: 4,
+    right: 4,
+  },
+  badgeContainer: {
+    position: 'absolute',
     top: 8,
-    right: 8,
-    zIndex: 2,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 6,
+    paddingBottom: 4,
+  },
+  overlayContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  imdbLogo: {
+    backgroundColor: '#F5C518',
+    color: '#000',
+    fontSize: 8,
+    fontWeight: 'bold',
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderRadius: 2,
+    marginRight: 3,
+  },
+  rating: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  watchlistContainer: {
+    // Positioned at bottom right via parent flexbox
+    marginBottom: -7,
+    marginRight: -2,
   },
 });
 

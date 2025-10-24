@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { BASE_URL, API_OPTIONS } from '../utils/constants';
 import { Trailer } from '../types';
 
-export const useMovieTrailer = (movieId: number | null) => {
+export const useMovieTrailer = (movieId: number | null, mediaType: 'movie' | 'tv' = 'movie') => {
   const [trailer, setTrailer] = useState<Trailer | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +19,7 @@ export const useMovieTrailer = (movieId: number | null) => {
         setError(null);
         
         const response = await fetch(
-          `${BASE_URL}/movie/${movieId}/videos?language=en-US`,
+          `${BASE_URL}/${mediaType}/${movieId}/videos?language=en-US`,
           API_OPTIONS
         );
         

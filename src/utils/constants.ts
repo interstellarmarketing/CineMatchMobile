@@ -1,5 +1,5 @@
 // API Configuration
-export const TMDB_API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0ZmExNDA1ZGNlZGMwNDU2YjViN2E4ZTQwNDZiZWU2NyIsIm5iZiI6MTcwODg5MTMxNi44OTMsInN1YiI6IjY1ZGI5Y2I0M2RjODg1MDE2ODQxNzVlNSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sa9Yr_CWDIkbj8iP66TOqAyHuBoN4P_BJT-kHAiv9Pw';
+export const TMDB_API_KEY = process.env.EXPO_PUBLIC_TMDB_API_KEY || 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0ZmExNDA1ZGNlZGMwNDU2YjViN2E4ZTQwNDZiZWU2NyIsIm5iZiI6MTcwODg5MTMxNi44OTMsInN1YiI6IjY1ZGI5Y2I0M2RjODg1MDE2ODQxNzVlNSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sa9Yr_CWDIkbj8iP66TOqAyHuBoN4P_BJT-kHAiv9Pw';
 
 export const API_OPTIONS = {
   method: 'GET',
@@ -34,6 +34,15 @@ export const COLORS = {
   accent: '#F59E0B',
   error: '#EF4444',
   success: '#10B981',
+  card: '#1F2937',
+  backgroundLighter: '#23242a',
+  // JustWatch color palette
+  JW_TOP_BG: '#0D1B2A',
+  JW_BOTTOM_BG: '#0A1016',
+  JW_PILL_STRIP: '#1A2230',
+  JW_PILL_ACTIVE: '#283246',
+  JW_TEXT_HIGH: 'rgba(255,255,255,1)',
+  JW_TEXT_MEDIUM: 'rgba(255,255,255,0.7)',
 };
 
 // Dimensions
@@ -54,4 +63,4 @@ export const SUPPORTED_LANGUAGES = [
 ];
 
 // Gemini AI Configuration
-export const GEMINI_API_KEY = 'AIzaSyCnBiDzCiO94LC7OjEuOdMWR2pAfciZ5RU'; // Replace with your actual Gemini API key 
+export const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'AIzaSyCnBiDzCiO94LC7OjEuOdMWR2pAfciZ5RU'; // Replace with your actual Gemini API key 

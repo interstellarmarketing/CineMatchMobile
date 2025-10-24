@@ -9,7 +9,6 @@ import {
   SafeAreaView,
   Alert,
   FlatList,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -17,17 +16,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { RootState, Movie } from '../types';
-import { setSearchResults, setLoading, clearSearchContext } from '../utils/slices/geminiSlice';
+import { setSearchResults, setLoading } from '../utils/slices/geminiSlice';
 import { GEMINI_API_KEY, API_OPTIONS, COLORS } from '../utils/constants';
 import GeminiMovieCard from '../components/GeminiMovieCard';
 import Logo from '../components/Logo';
 
-const { width } = Dimensions.get('window');
-
 const GeminiSearchScreen = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
-  const { searchResultMovies, searchQuery, isFromGPTSearch, isLoading } = useSelector(
+  const { searchResultMovies, isLoading } = useSelector(
     (state: RootState) => state.gemini
   );
   const [inputText, setInputText] = useState('');
@@ -40,7 +37,7 @@ const GeminiSearchScreen = () => {
         API_OPTIONS
       );
       const data = await response.json();
-      return (data.results || []).map((r: any) => ({ ...r, media_type: 'movie' }));
+      return (data.results || []).map((r: Record<string, unknown>) => ({ ...r, media_type: 'movie' }));
     } catch (error) {
       console.error('Error searching TMDB movies:', error);
       return [];
@@ -54,7 +51,7 @@ const GeminiSearchScreen = () => {
         API_OPTIONS
       );
       const data = await response.json();
-      return (data.results || []).map((r: any) => ({ ...r, media_type: 'tv' }));
+      return (data.results || []).map((r: Record<string, unknown>) => ({ ...r, media_type: 'tv' }));
     } catch (error) {
       console.error('Error searching TMDB TV:', error);
       return [];
@@ -136,15 +133,11 @@ const GeminiSearchScreen = () => {
     }
   };
 
-  const handleClearSearch = () => {
-    dispatch(clearSearchContext());
-    setInputText('');
-  };
-
   const handleMoviePress = (movie: Movie) => {
+    const mediaType = movie.media_type || (movie.title ? 'movie' : 'tv');
     navigation.navigate('MovieDetails' as never, { 
       movieId: movie.id, 
-      movie 
+      mediaType 
     } as never);
   };
 
@@ -154,7 +147,7 @@ const GeminiSearchScreen = () => {
       <Text style={styles.tipsTitle}>💡 Quick Tips</Text>
       <View style={styles.tipItem}>
         <Text style={styles.tipBullet}>•</Text>
-        <Text style={styles.tipText}>Start with "movie(s)" or "TV show(s)"</Text>
+        <Text style={styles.tipText}>Describe what you want to watch"</Text>
       </View>
       <View style={styles.tipItem}>
         <Text style={styles.tipBullet}>•</Text>
@@ -162,11 +155,11 @@ const GeminiSearchScreen = () => {
       </View>
       <View style={styles.tipItem}>
         <Text style={styles.tipBullet}>•</Text>
-        <Text style={styles.tipText}>Optional genre tag — "disaster movies"</Text>
+        <Text style={styles.tipText}>Add mood or genre preferences</Text>
       </View>
       <View style={styles.tipItem}>
         <Text style={styles.tipBullet}>•</Text>
-        <Text style={styles.tipText}>Multiple refs — "movies like [Movie 1] and [Movie 2]"</Text>
+        <Text style={styles.tipText}>"Shows similar to breaking bad"</Text>
       </View>
     </View>
   );
@@ -192,8 +185,7 @@ const GeminiSearchScreen = () => {
             <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
           <View style={styles.titleContainer}>
-            <Logo variant="main" size="small" style={styles.aiLogo} />
-            <Text style={styles.title}>AI Movie Search</Text>
+            <Logo variant="main" size="medium" style={styles.aiLogo} />
           </View>
         </View>
 
@@ -233,21 +225,6 @@ const GeminiSearchScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Previous Search Results Indicator */}
-        {isFromGPTSearch && searchResultMovies && searchResultMovies.length > 0 && (
-          <View style={styles.previousSearchContainer}>
-            <Text style={styles.previousSearchText}>
-              Previous search: "{searchQuery}" ({searchResultMovies.length} results)
-            </Text>
-            <TouchableOpacity
-              onPress={handleClearSearch}
-              style={styles.clearButton}
-            >
-              <Text style={styles.clearButtonText}>Clear</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* Results List */}
         <FlatList
           data={filteredMovies}
@@ -267,7 +244,7 @@ const GeminiSearchScreen = () => {
               <Text style={styles.emptyText}>
                 {isLoading
                   ? ''
-                  : 'Enter a search query to get AI-powered movie recommendations'}
+                  : 'Enter a search query to get Smith-powered movie recommendations'}
               </Text>
             </View>
           )}
@@ -301,9 +278,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginTop: 10,
     paddingHorizontal: 20,
+    position: 'relative',
   },
   backButton: {
-    marginRight: 15,
+    position: 'absolute',
+    left: 20,
+    zIndex: 1,
   },
   backButtonText: {
     color: COLORS.primary,
@@ -311,18 +291,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   aiLogo: {
-    marginRight: 8,
+    // Remove margin since it's now centered
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
+
   searchContainer: {
     flexDirection: 'row',
     marginBottom: 20,
@@ -369,36 +345,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  previousSearchContainer: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.3)',
-    marginHorizontal: 20,
-  },
-  previousSearchText: {
-    color: COLORS.text,
-    fontSize: 14,
-    flex: 1,
-  },
-  clearButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-  },
-  clearButtonText: {
-    color: COLORS.error,
-    fontSize: 12,
-    fontWeight: '600',
-  },
+
   tipsContainer: {
     backgroundColor: COLORS.surface,
     padding: 20,

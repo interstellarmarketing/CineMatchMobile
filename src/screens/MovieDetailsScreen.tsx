@@ -1,154 +1,214 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  Image,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { COLORS, IMG_CDN_URL, IMG_CDN_ORG_URL } from '../utils/constants';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import { useMovieDetails } from '../hooks/useMovieDetails';
-import { useMovieTrailer } from '../hooks/useMovieTrailer';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { COLORS, IMG_CDN_URL } from '../utils/constants';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import ErrorMessage from '../components/ErrorMessage';
-import FavoriteButton from '../components/FavoriteButton';
-import WatchlistButton from '../components/WatchlistButton';
+import WhereToWatchSection from '../components/WhereToWatchSection';
+import TrailerSection from '../components/TrailerSection';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-
-const { width, height } = Dimensions.get('window');
-
-import { RouteParams, MovieDetails } from '../types';
+import usePreferences from '../hooks/usePreferences';
 
 const MovieDetailsScreen = () => {
   const route = useRoute();
-  const navigation = useNavigation();
-  const { movieId, movie } = route.params as RouteParams;
+  const { movieId, mediaType = 'movie' } = route.params as { movieId: number; mediaType?: 'movie' | 'tv' };
   
-  const { movieDetails, loading: detailsLoading, error: detailsError } = useMovieDetails(movieId);
-  const { trailer, loading: trailerLoading } = useMovieTrailer(movieId);
+  const { movieDetails, loading, error } = useMovieDetails(movieId, mediaType);
+  const { favorites, watchlist, toggleFavorite, toggleWatchlist } = usePreferences();
 
-  const handleBack = () => {
-    navigation.goBack();
-  };
+  const [showFullOverview, setShowFullOverview] = useState(false);
 
-  const handlePlayTrailer = () => {
-    if (trailer) {
-      // TODO: Implement trailer playback functionality
-      // For now, this is a placeholder for future implementation
-    }
-  };
-
-  if (detailsLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <LoadingSpinner message="Loading movie details..." />
-      </SafeAreaView>
-    );
+  if (loading) {
+    return <ActivityIndicator size="large" color={COLORS.primary} style={styles.centered} />;
   }
 
-  if (detailsError) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <ErrorMessage message={detailsError} />
-      </SafeAreaView>
-    );
+  if (error) {
+    return <ErrorMessage message={error} />;
   }
 
   if (!movieDetails) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <ErrorMessage message="Movie not found" />
-      </SafeAreaView>
-    );
+    return <View />;
   }
 
+  const {
+    title,
+    name,
+    overview,
+    backdrop_path,
+    release_date,
+    first_air_date,
+    vote_average,
+    vote_count,
+    genres,
+    runtime,
+    status
+  } = movieDetails;
+
+  const formatRuntime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  };
+
+  const displayTitle = title || name;
+  const displayDate = release_date || first_air_date;
+  const year = displayDate ? new Date(displayDate).getFullYear() : '';
+  
+  const isFavorited = favorites.some(item => item.id === movieDetails.id);
+  const inWatchlist = watchlist.some(item => item.id === movieDetails.id);
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.scrollContent}>
-        {/* Backdrop Image */}
-        <View style={styles.backdropContainer}>
-          <Image
-            source={{
-              uri: movieDetails.backdrop_path 
-                ? `${IMG_CDN_ORG_URL}${movieDetails.backdrop_path}`
-                : `${IMG_CDN_URL}${movieDetails.poster_path}`
-            }}
-            style={styles.backdrop}
-            resizeMode="cover"
-          />
-          <View style={styles.backdropOverlay} />
-          
-          {/* Back Button */}
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Icon name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <FavoriteButton media={movieDetails} size="lg" />
-            <WatchlistButton media={movieDetails} size="lg" />
-          </View>
-        </View>
-
-        {/* Content */}
-        <View style={styles.content}>
-          {/* Title and Rating */}
-          <View style={styles.titleSection}>
-            <Text style={styles.title}>{movieDetails.title}</Text>
+    <ScrollView style={styles.container}>
+      {/* Backdrop with Gradient Overlay */}
+      <View style={styles.backdropContainer}>
+        <Image
+          style={styles.backdrop}
+          source={backdrop_path ? `${IMG_CDN_URL}${backdrop_path}` : undefined}
+          contentFit="cover"
+          transition={300}
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)']}
+          style={styles.backdropGradient}
+        />
+        
+        {/* Overlay Info on Backdrop */}
+        <View style={styles.backdropOverlay}>
+          {/* IMDb Rating and Metadata */}
+          <View style={styles.metadataContainer}>
+            {/* IMDb Rating */}
             <View style={styles.ratingContainer}>
-              <Icon name="star" size={20} color="#fbbf24" />
-              <Text style={styles.rating}>{movieDetails.vote_average.toFixed(1)}</Text>
-            </View>
-          </View>
-
-          {/* Genres */}
-          <View style={styles.genresContainer}>
-            {movieDetails.genres.map((genre, index) => (
-              <View key={genre.id} style={styles.genreTag}>
-                <Text style={styles.genreText}>{genre.name}</Text>
+              <View style={styles.imdbContainer}>
+                <Text style={styles.imdbLogo}>IMDb</Text>
               </View>
-            ))}
-          </View>
-
-          {/* Play Trailer Button */}
-          {trailer && (
-            <TouchableOpacity style={styles.playButton} onPress={handlePlayTrailer}>
-              <Icon name="play-arrow" size={24} color="white" />
-              <Text style={styles.playButtonText}>Watch Trailer</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Overview */}
-          <View style={styles.overviewSection}>
-            <Text style={styles.overviewTitle}>Overview</Text>
-            <Text style={styles.overview}>{movieDetails.overview}</Text>
-          </View>
-
-          {/* Additional Info */}
-          <View style={styles.infoSection}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Release Date:</Text>
-              <Text style={styles.infoValue}>
-                {movieDetails.release_date ? new Date(movieDetails.release_date).toLocaleDateString() : 'TBA'}
-              </Text>
+              <Text style={styles.ratingText}>{(vote_average || 0).toFixed(1)}</Text>
+              <Text style={styles.voteCount}>({vote_count?.toLocaleString() || 0})</Text>
             </View>
-            {movieDetails.runtime && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Runtime:</Text>
-                <Text style={styles.infoValue}>{movieDetails.runtime} min</Text>
-              </View>
+            
+            <Text style={styles.separator}>•</Text>
+            
+            {/* Year and other metadata */}
+            <Text style={styles.year}>{year}</Text>
+            {runtime && (
+              <>
+                <Text style={styles.separator}>•</Text>
+                <Text style={styles.runtime}>{formatRuntime(runtime)}</Text>
+              </>
             )}
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Status:</Text>
-              <Text style={styles.infoValue}>{movieDetails.status}</Text>
-            </View>
+            {status && (
+              <>
+                <Text style={styles.separator}>•</Text>
+                <Text style={styles.status}>{status}</Text>
+              </>
+            )}
           </View>
         </View>
       </View>
-    </SafeAreaView>
+
+      {/* Content Section */}
+      <View style={styles.content}>
+        {/* Details Section */}
+        <View style={styles.details}>
+          {/* Title */}
+          <Text style={styles.title}>{displayTitle}</Text>
+        </View>
+      </View>
+
+      {/* Overview Section */}
+      <View style={styles.overviewContainer}>
+        <Text style={styles.overview}>
+          {showFullOverview ? overview : (overview || '').slice(0, 200)}
+        </Text>
+        {(overview || '').length > 200 && (
+          <TouchableOpacity
+            style={styles.readMoreButton}
+            onPress={() => setShowFullOverview(!showFullOverview)}
+          >
+            <Text style={styles.readMoreButtonText}>
+              {showFullOverview ? 'Read Less' : 'Read More'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Where to Watch Section */}
+      <WhereToWatchSection
+        mediaType={mediaType}
+        mediaId={movieId}
+        title={displayTitle || ''}
+      />
+
+      {/* Action Buttons */}
+      <View style={styles.actionButtonsContainer}>
+        <TouchableOpacity 
+          style={[styles.actionButton, styles.likeButton]} 
+          onPress={() => toggleFavorite(movieDetails)}
+        >
+          <Icon 
+            name={isFavorited ? 'favorite' : 'favorite-border'} 
+            size={22} 
+            color="#ef4444" 
+          />
+          <Text style={styles.buttonText}>{isFavorited ? 'Liked' : 'Like'}</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.actionButton, styles.watchlistButton]} 
+          onPress={() => toggleWatchlist(movieDetails)}
+        >
+          <Icon 
+            name={inWatchlist ? 'bookmark' : 'bookmark-add'} 
+            size={22} 
+            color="#0ea5e9" 
+          />
+          <Text style={styles.buttonText}>{inWatchlist ? 'In Watchlist' : 'Watchlist'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Trailer Section */}
+      <TrailerSection
+        movieId={movieId}
+        mediaType={mediaType}
+        title={displayTitle || ''}
+      />
+
+      {/* Details Section */}
+      <View style={styles.detailsSection}>
+        {/* Genres */}
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>GENRES</Text>
+          <Text style={styles.detailValue}>{genres.map(g => g.name).join(', ')}</Text>
+        </View>
+
+        {/* Runtime */}
+        {runtime && (
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>RUNTIME</Text>
+            <Text style={styles.detailValue}>{formatRuntime(runtime)}</Text>
+          </View>
+        )}
+
+        {/* Age Rating */}
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>AGE RATING</Text>
+          <Text style={styles.detailValue}>TV-MA</Text>
+        </View>
+
+        {/* Production Country */}
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>PRODUCTION COUNTRY</Text>
+          <Text style={styles.detailValue}>United States</Text>
+        </View>
+
+        {/* Cast */}
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>CAST</Text>
+          <Text style={styles.detailValue}>Eric Bana, Sam Neill, Rosemarie DeWitt, Lily Sa, Kyle Turner, Paul Souter, Jill Bodwin, Naya</Text>
+        </View>
+      </View>
+    </ScrollView>
   );
 };
 
@@ -157,143 +217,196 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  scrollContent: {
-    flexGrow: 1,
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
   },
   backdropContainer: {
-    height: height * 0.4,
     position: 'relative',
+    height: 250,
   },
   backdrop: {
     width: '100%',
     height: '100%',
   },
-  backdropOverlay: {
+  backdropGradient: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  },
-  backButton: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  actionButtons: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    flexDirection: 'row',
-    gap: 12,
-    zIndex: 10,
   },
   content: {
-    padding: 20,
-    marginTop: -40,
+    padding: 15,
     backgroundColor: COLORS.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    flex: 1,
   },
-  titleSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
+  details: {
     flex: 1,
-    marginRight: 16,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    marginBottom: 8,
+    gap: 8,
   },
-  rating: {
-    color: '#fbbf24',
-    fontSize: 16,
+  imdbContainer: {
+    backgroundColor: '#F5C518',
+    padding: 2,
+    borderRadius: 4,
+  },
+  imdbLogo: {
+    color: '#000000',
+    fontSize: 14,
     fontWeight: 'bold',
-    marginLeft: 4,
+  },
+  ratingText: {
+    color: '#87CEEB',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  voteCount: {
+    color: '#87CEEB',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  metadataContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    flexWrap: 'wrap',
+  },
+  year: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  separator: {
+    color: '#ffffff',
+    fontSize: 16,
+    marginHorizontal: 8,
+  },
+  runtime: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  status: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  title: {
+    color: COLORS.text,
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 0,
+    lineHeight: 34,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    paddingTop: 20,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  likeButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  watchlistButton: {
+    backgroundColor: 'rgba(14, 165, 233, 0.1)',
+    borderColor: 'rgba(14, 165, 233, 0.3)',
+  },
+  buttonText: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
   },
   genresContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 20,
-    gap: 8,
+    marginBottom: 16,
   },
-  genreTag: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+  genre: {
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
+    marginBottom: 6,
   },
   genreText: {
-    color: 'white',
+    color: COLORS.textSecondary,
     fontSize: 12,
-    fontWeight: '600',
   },
-  playButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 24,
-    alignSelf: 'flex-start',
-  },
-  playButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  overviewSection: {
-    marginBottom: 24,
-  },
-  overviewTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 8,
+  overviewContainer: {
+    padding: 15,
+    paddingBottom: 0,
   },
   overview: {
+    color: COLORS.text,
     fontSize: 16,
-    color: COLORS.textSecondary,
     lineHeight: 24,
   },
-  infoSection: {
-    gap: 12,
+  detailsSection: {
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  detailRow: {
+    marginBottom: 16,
   },
-  infoLabel: {
-    fontSize: 14,
+  detailLabel: {
     color: COLORS.textSecondary,
-    fontWeight: '500',
-  },
-  infoValue: {
     fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  detailValue: {
     color: COLORS.text,
+    fontSize: 16,
+  },
+  ratingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingIcon: {
+    color: '#FFD700',
+    fontSize: 16,
+  },
+  backdropOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 15,
+    justifyContent: 'flex-end',
+  },
+  readMoreButton: {
+    backgroundColor: 'rgba(14, 165, 233, 0.1)',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  readMoreButtonText: {
+    color: '#0ea5e9',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

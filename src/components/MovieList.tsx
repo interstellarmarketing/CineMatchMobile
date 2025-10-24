@@ -2,11 +2,11 @@ import React, { useCallback } from 'react';
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MovieCard from './MovieCard';
 import MovieSkeleton from './MovieSkeleton';
@@ -32,22 +32,6 @@ const MovieList: React.FC<MovieListWithLoadingProps> = React.memo(({ title, movi
     return <MovieCard poster_path={item.poster_path} movie={item} onPress={onMoviePress} />;
   }, [onMoviePress]);
 
-  const renderArrow = useCallback((direction: 'left' | 'right') => (
-    <TouchableOpacity
-      style={[
-        styles.arrowButton,
-        direction === 'left' ? styles.leftArrow : styles.rightArrow,
-      ]}
-      activeOpacity={0.7}
-    >
-      <Icon
-        name={direction === 'left' ? 'chevron-left' : 'chevron-right'}
-        size={24}
-        color="white"
-      />
-    </TouchableOpacity>
-  ), []);
-
   const keyExtractor = useCallback((item: Movie) => item.id.toString(), []);
 
   const getItemLayout = useCallback((data: Movie[] | null, index: number) => ({
@@ -61,32 +45,17 @@ const MovieList: React.FC<MovieListWithLoadingProps> = React.memo(({ title, movi
       <Text style={styles.title}>{title}</Text>
       
       <View style={styles.listContainer}>
-        {renderArrow('left')}
         
-        <FlatList
+        <FlashList
           data={movies}
           renderItem={renderMedia}
           keyExtractor={keyExtractor}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
-          snapToInterval={200} // Adjust based on card width + margins
-          decelerationRate="fast"
-          bounces={false}
-          // Performance optimizations
-          initialNumToRender={5}
-          maxToRenderPerBatch={5}
-          windowSize={10}
-          removeClippedSubviews={true}
-          getItemLayout={getItemLayout}
-          // Memory optimization
-          updateCellsBatchingPeriod={50}
-          disableVirtualization={false}
-          // Smooth scrolling
-          scrollEventThrottle={16}
+          estimatedItemSize={140}
         />
         
-        {renderArrow('right')}
       </View>
     </View>
   );

@@ -5,8 +5,6 @@ import { RootState } from '../types';
 
 // Import reducers
 import userReducer from './slices/userSlice';
-import moviesReducer from './slices/moviesSlice';
-import detailsReducer from './slices/detailsSlice';
 import preferencesReducer from './slices/preferencesSlice';
 import geminiReducer from './slices/geminiSlice';
 
@@ -32,8 +30,6 @@ const persistedPreferencesReducer = persistReducer(preferencesPersistConfig, pre
 export const store = configureStore({
   reducer: {
     user: persistedUserReducer,
-    movies: moviesReducer,
-    details: detailsReducer,
     preferences: persistedPreferencesReducer,
     gemini: geminiReducer,
   },
