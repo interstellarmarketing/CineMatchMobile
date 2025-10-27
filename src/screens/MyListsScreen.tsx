@@ -44,6 +44,7 @@ const MyListsScreen = () => {
 
   const handleMoviePress = (movie: Movie) => {
     const mediaType = movie.media_type || (movie.title ? 'movie' : 'tv');
+    // @ts-expect-error - navigation params are typed via React Navigation generics elsewhere
     navigation.navigate('MovieDetails' as never, { 
       movieId: movie.id, 
       mediaType 
@@ -230,6 +231,7 @@ const MyListsScreen = () => {
       <MyListCard
         item={item}
         onPress={handleMoviePress}
+        context={activeTab === 'watchlist' ? 'watchlist' : activeTab === 'likes' ? 'likes' : undefined}
       />
     );
   };

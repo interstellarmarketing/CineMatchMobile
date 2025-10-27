@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { useMovieDetails } from '../hooks/useMovieDetails';
+import { useTraktRatings } from '../hooks/useTraktRatings';
 import { COLORS, IMG_CDN_URL } from '../utils/constants';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +17,7 @@ const MovieDetailsScreen = () => {
   const { movieId, mediaType = 'movie' } = route.params as { movieId: number; mediaType?: 'movie' | 'tv' };
   
   const { movieDetails, loading, error } = useMovieDetails(movieId, mediaType);
+  const { data: traktRating, isLoading: isTraktLoading } = useTraktRatings(movieDetails?.id || 0, mediaType === 'movie');
   const { favorites, watchlist, toggleFavorite, toggleWatchlist } = usePreferences();
 
   const [showFullOverview, setShowFullOverview] = useState(false);
@@ -86,6 +88,20 @@ const MovieDetailsScreen = () => {
               <Text style={styles.ratingText}>{(vote_average || 0).toFixed(1)}</Text>
               <Text style={styles.voteCount}>({vote_count?.toLocaleString() || 0})</Text>
             </View>
+
+            {/* Trakt Rating */}
+            {!isTraktLoading && traktRating && (
+              <>
+                <Text style={styles.separator}>•</Text>
+                <View style={styles.ratingContainer}>
+                  <View style={[styles.imdbContainer, styles.traktContainer]}>
+                    <Text style={styles.imdbLogo}>TRAKT</Text>
+                  </View>
+                  <Text style={styles.ratingText}>{traktRating.rating.toFixed(1)}</Text>
+                  <Text style={styles.voteCount}>({traktRating.votes.toLocaleString()})</Text>
+                </View>
+              </>
+            )}
             
             <Text style={styles.separator}>•</Text>
             
@@ -255,6 +271,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5C518',
     padding: 2,
     borderRadius: 4,
+  },
+  traktContainer: {
+    backgroundColor: '#ED1C24', // Trakt's brand color
   },
   imdbLogo: {
     color: '#000000',

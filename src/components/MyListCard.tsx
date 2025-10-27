@@ -4,27 +4,37 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
-  Image,
+  Linking,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Movie } from '../types';
-import { IMG_CDN_URL, MOVIE_BANNER, COLORS } from '../utils/constants';
-import { redirectToStreamingService, pickBestStreamingOption, formatServiceName } from '../utils/streamingServices';
+import { IMG_CDN_URL, MOVIE_BANNER } from '../utils/constants';
+import { redirectToStreamingService, pickBestStreamingOption } from '../utils/streamingServices';
 import { useProcessedWatchProviders } from '../hooks/useWatchProviders';
+import { useTitleMiniDetails } from '../hooks/useTitleMiniDetails';
 
 interface MyListCardProps {
   item: Movie;
   onPress?: (item: Movie) => void;
+  // Which tab is rendering this card; controls the top-right status icon
+  context?: 'watchlist' | 'likes';
 }
 
-const MyListCard: React.FC<MyListCardProps> = ({ item, onPress }) => {
+const MyListCard: React.FC<MyListCardProps> = ({ item, onPress, context }) => {
   // Get real streaming data using the hook (must be called before any early returns)
   const isMovie = item?.media_type === 'movie' || !!item?.title;
-  const { streamProviders, hasProviders } = useProcessedWatchProviders(
+  const { streamProviders, rentProviders, buyProviders, freeProviders, totalProviders } = useProcessedWatchProviders(
     isMovie ? 'movie' : 'tv',
     item?.id || 0,
     !!item?.id // Only enable the query if we have a valid ID
+  );
+
+  // Mini details (runtime/seasons/overview/year) to fill gaps when list items are sparse
+  const { runtimeMinutes, seasons, overview: fetchedOverview, year: fetchedYear, voteAverage, releaseDate } = useTitleMiniDetails(
+    isMovie ? 'movie' : 'tv',
+    item?.id || 0,
+    !!item?.id
   );
 
   // Defensive check for invalid items
@@ -32,8 +42,10 @@ const MyListCard: React.FC<MyListCardProps> = ({ item, onPress }) => {
     return null;
   }
 
-  const rating = item.vote_average?.toFixed(1);
-  const year = (item.release_date || item.first_air_date || '').slice(0, 4);
+  const baseVote = item.vote_average ?? voteAverage ?? 0;
+  const rating = baseVote ? baseVote.toFixed(1) : undefined;
+  const year = (item.release_date || item.first_air_date || fetchedYear || '').slice(0, 4);
+  const userScorePct = Math.round((baseVote || 0) * 10);
   
   // Pick the best streaming option from available providers
   const streamingOptions = streamProviders.map(provider => ({
@@ -41,6 +53,13 @@ const MyListCard: React.FC<MyListCardProps> = ({ item, onPress }) => {
     type: provider._streamType
   }));
   const bestStreamingOption = pickBestStreamingOption(streamingOptions);
+  // Match provider object to get logo
+  const bestProviderObj = bestStreamingOption
+    ? streamProviders.find(p => p.provider_name === bestStreamingOption.name)
+    : undefined;
+  const providerLogo = bestProviderObj?.logo_path
+    ? `https://image.tmdb.org/t/p/w45${bestProviderObj.logo_path}`
+    : undefined;
   
   // Get service initial and color for the button
   const getServiceInitial = (serviceName: string) => {
@@ -76,22 +95,58 @@ const MyListCard: React.FC<MyListCardProps> = ({ item, onPress }) => {
   };
 
   const serviceInitial = bestStreamingOption ? getServiceInitial(bestStreamingOption.name) : 'S';
-  const serviceColor = bestStreamingOption ? getServiceColor(bestStreamingOption.name) : '#666666';
-  const serviceName = bestStreamingOption ? formatServiceName(bestStreamingOption.name) : 'Streaming';
+  const serviceColor = bestStreamingOption ? getServiceColor(bestStreamingOption.name) : '#3A3A3A';
 
   const handlePress = () => {
     onPress?.(item);
   };
 
-  const handleStreamingPress = () => {
-    if (bestStreamingOption) {
-      redirectToStreamingService(bestStreamingOption.name, item.title || item.name || '');
+  // Button strategy
+  const hasStream = streamProviders.length > 0;
+  const rentBuyOffers = (rentProviders?.length || 0) + (buyProviders?.length || 0);
+  const hasAnyProviders = (totalProviders ?? (streamProviders.length + rentProviders.length + buyProviders.length + freeProviders.length)) > 0;
+  const releaseDateStr = (item.release_date || item.first_air_date || releaseDate || '') as string;
+  const inTheaters = !hasAnyProviders && isWithinDays(releaseDateStr, 60);
+
+  let buttonLabel = 'SEARCH TO WATCH';
+  let buttonBg = serviceColor;
+  let showLogo = false;
+  let onButtonPress: () => void = () => openGoogleSearch(item.title || item.name || '');
+
+  if (hasStream && bestStreamingOption) {
+    buttonLabel = 'WATCH NOW';
+    buttonBg = serviceColor;
+    showLogo = !!providerLogo;
+    onButtonPress = () => redirectToStreamingService(bestStreamingOption.name, item.title || item.name || '');
+  } else if (rentBuyOffers > 0) {
+    buttonLabel = `${rentBuyOffers} OFFERS AVAILABLE`;
+    buttonBg = '#3A3A3A';
+    showLogo = false; // per your note, no logo for rent/buy-only
+    const offerOptions: Array<{ name: string; type?: string }> = [...rentProviders, ...buyProviders].map(p => ({ name: p.provider_name }));
+    const bestOffer = pickBestStreamingOption(offerOptions);
+    if (bestOffer) {
+      onButtonPress = () => redirectToStreamingService(bestOffer.name, item.title || item.name || '');
     }
-  };
+  } else if (inTheaters) {
+    buttonLabel = 'IN THEATERS';
+    buttonBg = '#3A3A3A';
+    showLogo = false;
+    onButtonPress = () => openGoogleSearch(`${item.title || item.name || ''} showtimes`);
+  }
 
   return (
     <TouchableOpacity style={styles.container} onPress={handlePress}>
       <View style={styles.card}>
+        {/* Top-right status icon (watchlist/likes) */}
+        {context && (
+          <View style={styles.statusIconContainer}>
+            {context === 'watchlist' ? (
+              <Icon name="check-circle" size={22} color="#9CA3AF" />
+            ) : (
+              <Icon name="favorite" size={20} color="#9CA3AF" />
+            )}
+          </View>
+        )}
         {/* Poster */}
         <View style={styles.posterContainer}>
           <ExpoImage
@@ -117,40 +172,51 @@ const MyListCard: React.FC<MyListCardProps> = ({ item, onPress }) => {
           </View>
 
           <View style={styles.metadata}>
-            <Text style={styles.metadataText}>
-              {year && `${year} • `}
-            </Text>
+            {!!year && <Text style={styles.metadataText}>{year}</Text>}
             {rating && (
               <View style={styles.ratingContainer}>
-                <Text style={styles.imdbLogo}>IMDb</Text>
+                <Text style={styles.imdbLogo}>TMDB</Text>
                 <Text style={styles.rating}>{rating}</Text>
               </View>
             )}
+            <View style={styles.userScoreContainer}>
+              <Icon name="local-activity" size={12} color="#FBBF24" />
+              <Text style={styles.userScoreText}> {userScorePct}%</Text>
+            </View>
+            {isMovie && runtimeMinutes ? (
+              <Text style={styles.metadataText}> | {formatRuntime(runtimeMinutes)}</Text>
+            ) : !isMovie && seasons ? (
+              <Text style={styles.metadataText}> | {seasons} {seasons === 1 ? 'Season' : 'Seasons'}</Text>
+            ) : null}
           </View>
 
-          {item.overview && (
-            <Text style={styles.overview} numberOfLines={2}>
-              {item.overview}
+          {(item.overview || fetchedOverview) && (
+            <Text style={styles.overview} numberOfLines={3}>
+              {item.overview || fetchedOverview}
             </Text>
           )}
 
-          {/* Streaming Service Button */}
-          {hasProviders && bestStreamingOption && (
-            <TouchableOpacity
-              style={[styles.streamingButton, { backgroundColor: serviceColor }]}
-              onPress={handleStreamingPress}
-              activeOpacity={0.8}
-            >
-              <View style={styles.streamingButtonContent}>
+          {/* Action Button - always visible with appropriate label */}
+          <TouchableOpacity
+            style={[styles.streamingButton, { backgroundColor: buttonBg }]}
+            onPress={onButtonPress}
+            activeOpacity={0.8}
+          >
+            <View style={styles.streamingButtonContent}>
+              {showLogo && (
                 <View style={styles.streamingIconContainer}>
-                  <Text style={styles.streamingIconText}>{serviceInitial}</Text>
+                  {providerLogo ? (
+                    <ExpoImage source={providerLogo} style={styles.providerLogo} contentFit="contain" />
+                  ) : (
+                    <Text style={styles.streamingIconText}>{serviceInitial}</Text>
+                  )}
                 </View>
-                <Text style={styles.streamingButtonText}>
-                  Watch on {serviceName}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
+              )}
+              <Text style={styles.streamingButtonText}>
+                {buttonLabel}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
@@ -172,6 +238,18 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
     height: 180,
+  },
+  statusIconContainer: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
   posterContainer: {
     position: 'relative',
@@ -214,6 +292,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
   metadataText: {
     fontSize: 12,
@@ -222,9 +301,10 @@ const styles = StyleSheet.create({
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 8,
   },
   imdbLogo: {
-    backgroundColor: '#F5C518',
+    backgroundColor: '#01B4E4',
     color: '#000',
     fontSize: 8,
     fontWeight: 'bold',
@@ -237,6 +317,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: 'white',
+  },
+  userScoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  userScoreText: {
+    fontSize: 12,
+    color: 'white',
+    fontWeight: '600',
   },
   overview: {
     fontSize: 11,
@@ -268,6 +358,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 6,
   },
+  providerLogo: {
+    width: 18,
+    height: 18,
+  },
   streamingIconText: {
     color: 'white',
     fontSize: 12,
@@ -281,3 +375,28 @@ const styles = StyleSheet.create({
 });
 
 export default MyListCard; 
+
+// Helpers
+function formatRuntime(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) {
+    return `${hours}h ${minutes}min`;
+  }
+  return `${minutes}min`;
+}
+
+function isWithinDays(dateStr: string, days: number): boolean {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return false;
+  const diff = Date.now() - d.getTime();
+  const dayMs = 1000 * 60 * 60 * 24;
+  return diff >= 0 && diff <= days * dayMs;
+}
+
+function openGoogleSearch(query: string) {
+  if (!query) return;
+  const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  Linking.openURL(url);
+}

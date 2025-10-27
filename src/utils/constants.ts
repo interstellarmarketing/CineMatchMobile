@@ -63,4 +63,8 @@ export const SUPPORTED_LANGUAGES = [
 ];
 
 // Gemini AI Configuration
-export const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'AIzaSyCnBiDzCiO94LC7OjEuOdMWR2pAfciZ5RU'; // Replace with your actual Gemini API key 
+export const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'AIzaSyCnBiDzCiO94LC7OjEuOdMWR2pAfciZ5RU'; // Replace with your actual Gemini API key
+
+// Trakt API Configuration
+export const TRAKT_API_KEY = process.env.EXPO_PUBLIC_TRAKT_API_KEY || 'a4a0361e70aefc960d39a9d7b179475c9d12d8bb41c397b82c85c5287acc9a21';
+export const TRAKT_API_URL = 'https://api.trakt.tv'; 

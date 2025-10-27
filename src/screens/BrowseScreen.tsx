@@ -19,6 +19,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import { useTrendingMovies } from '../hooks/useTrendingMovies';
 import { usePopularMovies } from '../hooks/usePopularMovies';
+import { useTraktMovieList } from '../hooks/useTraktMovieList';
 import { useTrendingTV } from '../hooks/useTrendingTV';
 import { usePopularTV } from '../hooks/usePopularTV';
 import { useInfiniteFilteredMovies, useInfiniteFilteredTVShows } from '../hooks/useFilteredMovies';
@@ -30,10 +31,24 @@ import TVCard from '../components/TVCard';
 import Logo from '../components/Logo';
 import { Feather } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+// Assuming RootStackParamList is defined in your navigation types
+// You might need to import this from your navigation setup file
+type RootStackParamList = {
+  MovieDetails: { movieId: number; mediaType: 'movie' | 'tv' };
+  Profile: undefined;
+  Search: undefined;
+  // Add other routes here
+};
+
+type BrowseScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const SORT_OPTIONS = [
   { key: 'trending', label: 'Trending' },
   { key: 'popularity.desc', label: 'Popular' },
+  { key: 'trakt-trending', label: 'Trending on Trakt' },
+  { key: 'trakt-popular', label: 'Popular on Trakt' },
   { key: 'vote_average.desc', label: 'Rating' },
   { key: 'release_date.desc', label: 'Release Date' },
   { key: 'title.asc', label: 'Title' },
@@ -59,20 +74,44 @@ const MOVIE_AGE_RATINGS = ['G', 'PG', 'PG-13', 'R', 'NC-17'];
 const TV_AGE_RATINGS = ['TV-Y', 'TV-G', 'TV-PG', 'TV-14', 'TV-MA'];
 
 const BrowseScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<BrowseScreenNavigationProp>();
   const insets = useSafeAreaInsets();
   const { movies: trendingMovies, loading: trendingMoviesLoading, error: trendingError } = useTrendingMovies();
   const { movies: popularMovies, loading: popularMoviesLoading, error: popularError } = usePopularMovies();
+  const { data: traktTrending, isLoading: isTraktTrendingLoading } = useTraktMovieList('trending');
+  const { data: traktPopular, isLoading: isTraktPopularLoading } = useTraktMovieList('popular');
   const { shows: trendingTV, loading: trendingTVLoading, error: trendingTVError } = useTrendingTV();
   const { shows: popularTV, loading: popularTVLoading, error: popularTVError } = usePopularTV();
 
   const [selectedTab, setSelectedTab] = useState<'all' | 'movies' | 'tv'>('all');
-  const [selectedFilter, setSelectedFilter] = useState<'trending' | 'popularity.desc' | 'vote_average.desc' | 'release_date.desc' | 'title.asc'>('trending');
+  const [selectedFilter, setSelectedFilter] = useState<'trending' | 'popularity.desc' | 'vote_average.desc' | 'release_date.desc' | 'title.asc' | 'trakt-trending' | 'trakt-popular'>('trending');
   const [showSortSheet, setShowSortSheet] = useState(false);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [filterPan] = useState(new Animated.Value(0));
 
   const pan = useState(new Animated.Value(0))[0];
+  
+  const {
+    filterState,
+    movieFilters,
+    tvFilters,
+    updateGenreFilter,
+    updateMinRating,
+    toggleMovieAgeRating,
+    toggleTvAgeRating,
+    updateSortBy,
+    clearFilters,
+    hasActiveFilters,
+  } = useFilterState();
+  
+  const closeSortSheet = useCallback(() => {
+    Animated.timing(pan, {
+      toValue: 300,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setShowSortSheet(false));
+  }, [pan]);
+
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
     onPanResponderMove: (_, gestureState) => {
@@ -86,6 +125,20 @@ const BrowseScreen = () => {
       }
     },
   });
+
+  const closeFilterSheet = useCallback(() => {
+    Animated.timing(filterPan, {
+      toValue: 300,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowFilterSheet(false);
+      if (hasActiveFilters && selectedFilter === 'trending') {
+        setSelectedFilter('popularity.desc');
+        updateSortBy('popularity.desc');
+      }
+    });
+  }, [filterPan, hasActiveFilters, selectedFilter, updateSortBy]);
 
   const filterPanResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
@@ -101,7 +154,7 @@ const BrowseScreen = () => {
     },
   });
 
-  const openSortSheet = () => {
+  const openSortSheet = useCallback(() => {
     setShowSortSheet(true);
     pan.setValue(300);
     Animated.timing(pan, {
@@ -109,16 +162,9 @@ const BrowseScreen = () => {
       duration: 250,
       useNativeDriver: true,
     }).start();
-  };
-  const closeSortSheet = () => {
-    Animated.timing(pan, {
-      toValue: 300,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => setShowSortSheet(false));
-  };
+  }, [pan]);
 
-  const openFilterSheet = () => {
+  const openFilterSheet = useCallback(() => {
     setShowFilterSheet(true);
     filterPan.setValue(300);
     Animated.timing(filterPan, {
@@ -126,33 +172,7 @@ const BrowseScreen = () => {
       duration: 250,
       useNativeDriver: true,
     }).start();
-  };
-  const closeFilterSheet = () => {
-    Animated.timing(filterPan, {
-      toValue: 300,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      setShowFilterSheet(false);
-      if (hasActiveFilters && selectedFilter === 'trending') {
-        setSelectedFilter('popularity.desc');
-        updateSortBy('popularity.desc');
-      }
-    });
-  };
-
-  const {
-    filterState,
-    movieFilters,
-    tvFilters,
-    updateGenreFilter,
-    updateMinRating,
-    toggleMovieAgeRating,
-    toggleTvAgeRating,
-    updateSortBy,
-    clearFilters,
-    hasActiveFilters,
-  } = useFilterState();
+  }, [filterPan]);
 
   // The 'enabled' flag is now controlled by hasActiveFilters and the selected tab
   const {
@@ -179,8 +199,8 @@ const BrowseScreen = () => {
   const gridData = useMemo(() => {
     if (hasActiveFilters) {
       // When filters are ON, use data from the infinite queries
-      const filteredMovies = infiniteMoviesData?.pages.flatMap((p: ApiResponse<Movie>) => p.results || []) || [];
-      const filteredTV = infiniteTVData?.pages.flatMap((p: ApiResponse<TVShow>) => p.results || []) || [];
+      const filteredMovies = infiniteMoviesData?.pages.flatMap((p) => p.results || []) || [];
+      const filteredTV = infiniteTVData?.pages.flatMap((p) => p.results || []) || [];
 
       if (selectedTab === 'movies') return filteredMovies;
       if (selectedTab === 'tv') return filteredTV;
@@ -201,6 +221,16 @@ const BrowseScreen = () => {
         } else { // 'tv'
           defaultList = [...trendingTV];
         }
+      } else if (selectedFilter === 'trakt-trending') {
+        if (selectedTab === 'all' || selectedTab === 'movies') {
+          defaultList = [...(traktTrending || [])];
+        }
+        // No TV shows from Trakt in this implementation yet
+      } else if (selectedFilter === 'trakt-popular') {
+        if (selectedTab === 'all' || selectedTab === 'movies') {
+          defaultList = [...(traktPopular || [])];
+        }
+        // No TV shows from Trakt in this implementation yet
       } else {
         // Use popular data (or other sorting methods use popular as base)
         if (selectedTab === 'all') {
@@ -236,7 +266,7 @@ const BrowseScreen = () => {
       
       return unique;
     }
-  }, [hasActiveFilters, selectedTab, selectedFilter, infiniteMoviesData, infiniteTVData, trendingMovies, trendingTV, popularMovies, popularTV, updateSortBy]);
+  }, [hasActiveFilters, selectedTab, selectedFilter, infiniteMoviesData, infiniteTVData, trendingMovies, trendingTV, popularMovies, popularTV, traktTrending, traktPopular]);
   
   const loadMore = useCallback(() => {
     // Only load more if filters are active, since default lists aren't paginated
@@ -251,8 +281,8 @@ const BrowseScreen = () => {
   }, [hasActiveFilters, selectedTab, hasNextMoviesPage, hasNextTVPage, fetchNextMoviesPage, fetchNextTVPage]);
   
   const handleMoviePress = useCallback((movie: Movie | TVShow) => {
-    const mediaType = 'name' in movie ? 'tv' : 'movie';
-    (navigation as any).navigate('MovieDetails', { 
+    const mediaType = 'name' in movie && movie.name ? 'tv' : 'movie';
+    navigation.navigate('MovieDetails', { 
       movieId: movie.id, 
       mediaType: mediaType 
     });
@@ -276,14 +306,14 @@ const BrowseScreen = () => {
   };
 
   const handleSortChange = (sortKey: string) => {
-    if (sortKey !== 'trending') {
+    if (sortKey !== 'trending' && sortKey !== 'trakt-trending' && sortKey !== 'trakt-popular') {
       updateSortBy(sortKey as 'popularity.desc' | 'vote_average.desc' | 'release_date.desc' | 'title.asc');
     }
-    setSelectedFilter(sortKey as 'trending' | 'popularity.desc' | 'vote_average.desc' | 'release_date.desc' | 'title.asc');
+    setSelectedFilter(sortKey as 'trending' | 'popularity.desc' | 'vote_average.desc' | 'release_date.desc' | 'title.asc' | 'trakt-trending' | 'trakt-popular');
     closeSortSheet();
   };
 
-  const isLoading = trendingMoviesLoading || popularMoviesLoading || trendingTVLoading || popularTVLoading;
+  const isLoading = trendingMoviesLoading || popularMoviesLoading || trendingTVLoading || popularTVLoading || isTraktTrendingLoading || isTraktPopularLoading;
 
   const renderListHeader = useCallback(() => (
     <View>
@@ -330,7 +360,7 @@ const BrowseScreen = () => {
         </View>
       </View>
     </View>
-  ), [selectedTab, gridData.length, selectedFilter, hasActiveFilters]);
+  ), [selectedTab, gridData.length, selectedFilter, hasActiveFilters, openFilterSheet, openSortSheet]);
 
   if (isLoading && gridData.length === 0) {
     return (
@@ -406,8 +436,8 @@ const BrowseScreen = () => {
             <View style={styles.genreChipsContainer}>
               {GENRES.map((genre) => {
                 const state = filterState.genreFilters[genre.id] || null;
-                let chipStyle = styles.genreChip;
-                let chipText = styles.genreChipText;
+                let chipStyle: any = styles.genreChip;
+                let chipText: any = styles.genreChipText;
                 if (state === 'include') {
                   chipStyle = [styles.genreChip, styles.genreChipInclude];
                   chipText = [styles.genreChipText, styles.genreChipTextInclude];
@@ -446,10 +476,10 @@ const BrowseScreen = () => {
               {MOVIE_AGE_RATINGS.map((rating) => (
                 <TouchableOpacity
                   key={rating}
-                  style={[styles.genreChip, filterState.movieAgeRatings.includes(rating) && styles.genreChipInclude]}
+                  style={[styles.genreChip, filterState.movieAgeRatings.includes(rating) && styles.genreChipInclude] as any}
                   onPress={() => toggleMovieAgeRating(rating)}
                 >
-                  <Text style={[styles.genreChipText, filterState.movieAgeRatings.includes(rating) && styles.genreChipTextInclude]}>{rating}</Text>
+                  <Text style={[styles.genreChipText, filterState.movieAgeRatings.includes(rating) && styles.genreChipTextInclude] as any}>{rating}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -458,10 +488,10 @@ const BrowseScreen = () => {
               {TV_AGE_RATINGS.map((rating) => (
                 <TouchableOpacity
                   key={rating}
-                  style={[styles.genreChip, filterState.tvAgeRatings.includes(rating) && styles.genreChipInclude]}
+                  style={[styles.genreChip, filterState.tvAgeRatings.includes(rating) && styles.genreChipInclude] as any}
                   onPress={() => toggleTvAgeRating(rating)}
                 >
-                  <Text style={[styles.genreChipText, filterState.tvAgeRatings.includes(rating) && styles.genreChipTextInclude]}>{rating}</Text>
+                  <Text style={[styles.genreChipText, filterState.tvAgeRatings.includes(rating) && styles.genreChipTextInclude] as any}>{rating}</Text>
                 </TouchableOpacity>
               ))}
             </View>

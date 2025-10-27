@@ -42,7 +42,7 @@ const TVCard: React.FC<MovieCardProps> = React.memo(({ movie, onPress, width }) 
       >
         <View style={styles.overlayContent}>
           <View style={styles.ratingContainer}>
-            <Text style={styles.imdbLogo}>IMDb</Text>
+            <Text style={styles.imdbLogo}>TMDB</Text>
             <Text style={styles.rating}>{(movie.vote_average || 0).toFixed(1)}</Text>
           </View>
           <View style={styles.watchlistContainer}>
