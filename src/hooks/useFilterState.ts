@@ -28,11 +28,11 @@ export const useFilterState = () => {
 
     // Convert genre filters
     const includeGenres = Object.entries(filterState.genreFilters)
-      .filter(([_, value]) => value === 'include')
+      .filter(([, value]) => value === 'include')
       .map(([key]) => parseInt(key));
     
     const excludeGenres = Object.entries(filterState.genreFilters)
-      .filter(([_, value]) => value === 'exclude')
+      .filter(([, value]) => value === 'exclude')
       .map(([key]) => parseInt(key));
 
     if (includeGenres.length > 0) {

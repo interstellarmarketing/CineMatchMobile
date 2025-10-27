@@ -102,7 +102,7 @@ class PerformanceMonitor {
   // Track memory usage (simplified)
   trackMemoryUsage() {
     try {
-      // @ts-ignore - performance.memory is available in development
+      // @ts-expect-error - performance.memory is available in development
       const memoryInfo = performance.memory;
       if (memoryInfo) {
         const usedJSHeapSize = memoryInfo.usedJSHeapSize / 1024 / 1024; // MB

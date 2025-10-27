@@ -2,12 +2,10 @@ import React, { useCallback } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Dimensions,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import MovieCard from './MovieCard';
 import MovieSkeleton from './MovieSkeleton';
 import TVCard from './TVCard';
@@ -17,16 +15,11 @@ interface MovieListWithLoadingProps extends MovieListProps {
   loading?: boolean;
 }
 
-const { width } = Dimensions.get('window');
-
 const MovieList: React.FC<MovieListWithLoadingProps> = React.memo(({ title, movies, onMoviePress, loading }) => {
-  if (loading) return <MovieSkeleton />;
-  if (!movies || movies.length === 0) return null;
-
   const renderMedia = useCallback(({ item }: { item: Movie }) => {
     if (item.media_type === 'tv' || !!item.name) {
       // TV show
-      return <TVCard show={item as any} onPress={onMoviePress} />;
+      return <TVCard show={item as unknown as Movie} onPress={onMoviePress} />;
     }
     // Movie
     return <MovieCard poster_path={item.poster_path} movie={item} onPress={onMoviePress} />;
@@ -34,11 +27,8 @@ const MovieList: React.FC<MovieListWithLoadingProps> = React.memo(({ title, movi
 
   const keyExtractor = useCallback((item: Movie) => item.id.toString(), []);
 
-  const getItemLayout = useCallback((data: Movie[] | null, index: number) => ({
-    length: 200,
-    offset: 200 * index,
-    index,
-  }), []);
+  if (loading) return <MovieSkeleton />;
+  if (!movies || movies.length === 0) return null;
 
   return (
     <View style={styles.container}>
@@ -60,6 +50,8 @@ const MovieList: React.FC<MovieListWithLoadingProps> = React.memo(({ title, movi
     </View>
   );
 });
+
+MovieList.displayName = 'MovieList';
 
 const styles = StyleSheet.create({
   container: {

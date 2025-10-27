@@ -23,7 +23,6 @@ const WhereToWatchSection: React.FC<WhereToWatchSectionProps> = React.memo(({
     buyProviders,
     freeProviders,
     hasProviders,
-    region,
     isLoading,
     error
   } = useProcessedWatchProviders(mediaType, mediaId, enabled);
@@ -68,7 +67,7 @@ const WhereToWatchSection: React.FC<WhereToWatchSectionProps> = React.memo(({
     );
   }
 
-  const renderProviderRow = (providers: any[], label: string, type: 'stream' | 'rent' | 'buy' | 'free') => {
+  const renderProviderRow = (providers: Array<{ provider_name: string; logo_path: string }>, label: string, type: 'stream' | 'rent' | 'buy' | 'free') => {
     if (!providers || providers.length === 0) return null;
 
     return (

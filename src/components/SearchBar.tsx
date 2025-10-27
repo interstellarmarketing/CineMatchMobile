@@ -4,12 +4,9 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../utils/constants';
-
-const { width } = Dimensions.get('window');
 
 interface SearchBarProps {
   onSearch: (query: string) => void;

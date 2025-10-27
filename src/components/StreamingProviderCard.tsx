@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { WatchProvider } from '../hooks/useWatchProviders';
-import { redirectToStreamingService, openAppStore, isMajorStreamingService, getProviderTypeLabel, getProviderPrice } from '../utils/streamingServices';
+import { redirectToStreamingService, openAppStore, isMajorStreamingService, getProviderPrice } from '../utils/streamingServices';
 import { COLORS } from '../utils/constants';
 
 interface StreamingProviderCardProps {
@@ -65,7 +65,7 @@ const StreamingProviderCard: React.FC<StreamingProviderCardProps> = React.memo((
           source={{ uri: `https://image.tmdb.org/t/p/original${provider.logo_path}` }}
           style={styles.logo}
           resizeMode="contain"
-          onError={(e) => {
+          onError={() => {
             // Handle image load error
             console.log('Error loading provider logo:', provider.provider_name);
           }}

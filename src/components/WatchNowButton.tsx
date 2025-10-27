@@ -7,7 +7,7 @@ interface WatchNowButtonProps {
   streamingOptions?: Array<{ name: string; type?: string }>;
   title: string;
   onPress?: () => void;
-  style?: any;
+  style?: Record<string, unknown>;
 }
 
 const WatchNowButton: React.FC<WatchNowButtonProps> = React.memo(({

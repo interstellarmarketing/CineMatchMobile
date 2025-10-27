@@ -11,6 +11,9 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
+  ViewStyle,
+  TextStyle,
+  StyleProp,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -24,7 +27,7 @@ import { useTrendingTV } from '../hooks/useTrendingTV';
 import { usePopularTV } from '../hooks/usePopularTV';
 import { useInfiniteFilteredMovies, useInfiniteFilteredTVShows } from '../hooks/useFilteredMovies';
 import { useFilterState } from '../hooks/useFilterState';
-import { Movie, TVShow, ApiResponse } from '../types';
+import { Movie, TVShow } from '../types';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MovieCard from '../components/MovieCard';
 import TVCard from '../components/TVCard';
@@ -436,8 +439,8 @@ const BrowseScreen = () => {
             <View style={styles.genreChipsContainer}>
               {GENRES.map((genre) => {
                 const state = filterState.genreFilters[genre.id] || null;
-                let chipStyle: any = styles.genreChip;
-                let chipText: any = styles.genreChipText;
+                let chipStyle: StyleProp<ViewStyle> = styles.genreChip;
+                let chipText: StyleProp<TextStyle> = styles.genreChipText;
                 if (state === 'include') {
                   chipStyle = [styles.genreChip, styles.genreChipInclude];
                   chipText = [styles.genreChipText, styles.genreChipTextInclude];
@@ -476,10 +479,10 @@ const BrowseScreen = () => {
               {MOVIE_AGE_RATINGS.map((rating) => (
                 <TouchableOpacity
                   key={rating}
-                  style={[styles.genreChip, filterState.movieAgeRatings.includes(rating) && styles.genreChipInclude] as any}
+                  style={[styles.genreChip, filterState.movieAgeRatings.includes(rating) && styles.genreChipInclude]}
                   onPress={() => toggleMovieAgeRating(rating)}
                 >
-                  <Text style={[styles.genreChipText, filterState.movieAgeRatings.includes(rating) && styles.genreChipTextInclude] as any}>{rating}</Text>
+                  <Text style={[styles.genreChipText, filterState.movieAgeRatings.includes(rating) && styles.genreChipTextInclude]}>{rating}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -488,10 +491,10 @@ const BrowseScreen = () => {
               {TV_AGE_RATINGS.map((rating) => (
                 <TouchableOpacity
                   key={rating}
-                  style={[styles.genreChip, filterState.tvAgeRatings.includes(rating) && styles.genreChipInclude] as any}
+                  style={[styles.genreChip, filterState.tvAgeRatings.includes(rating) && styles.genreChipInclude]}
                   onPress={() => toggleTvAgeRating(rating)}
                 >
-                  <Text style={[styles.genreChipText, filterState.tvAgeRatings.includes(rating) && styles.genreChipTextInclude] as any}>{rating}</Text>
+                  <Text style={[styles.genreChipText, filterState.tvAgeRatings.includes(rating) && styles.genreChipTextInclude]}>{rating}</Text>
                 </TouchableOpacity>
               ))}
             </View>

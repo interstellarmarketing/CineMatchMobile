@@ -40,23 +40,6 @@ const StreamingCharts: React.FC<StreamingChartsProps> = ({ onMoviePress }) => {
     }
   };
 
-  const getProviderColor = (providerId: number) => {
-    switch (providerId) {
-      case STREAMING_PROVIDERS.NETFLIX:
-        return '#E50914';
-      case STREAMING_PROVIDERS.PRIME_VIDEO:
-        return '#00A8E1';
-      case STREAMING_PROVIDERS.DISNEY_PLUS:
-        return '#0063E5';
-      case STREAMING_PROVIDERS.HULU:
-        return '#1CE783';
-      case STREAMING_PROVIDERS.HBO_MAX:
-        return '#5F2EEA';
-      default:
-        return COLORS.accent;
-    }
-  };
-
   const renderTrendIcon = (trendDirection: 'up' | 'down' | 'stable') => {
     if (trendDirection === 'up') {
       return <Text style={styles.trendIcon}>↗</Text>;
@@ -66,7 +49,7 @@ const StreamingCharts: React.FC<StreamingChartsProps> = ({ onMoviePress }) => {
     return null;
   };
 
-  const renderMovieCard = (movie: StreamingChartMovie, index: number) => (
+  const renderMovieCard = (movie: StreamingChartMovie) => (
     <TouchableOpacity
       key={movie.id}
       style={styles.movieCard}

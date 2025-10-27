@@ -12,7 +12,6 @@ interface LogoProps {
 const Logo: React.FC<LogoProps> = ({ 
   size = 'medium', 
   style, 
-  containerStyle,
   variant = 'main' 
 }) => {
   const getSize = () => {

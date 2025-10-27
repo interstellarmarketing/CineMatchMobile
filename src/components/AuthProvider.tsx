@@ -7,7 +7,7 @@ interface AuthProviderProps {
 }
 
 const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+  useAuth(); // Auth context is initialized here
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {

@@ -13,8 +13,7 @@ interface TrailerSectionProps {
 
 const TrailerSection: React.FC<TrailerSectionProps> = React.memo(({
   movieId,
-  mediaType,
-  title
+  mediaType
 }) => {
   const { trailers, bestTrailer, loading, error, hasTrailers } = useTrailers(movieId, mediaType);
 

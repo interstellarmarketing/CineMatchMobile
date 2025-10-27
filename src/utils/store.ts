@@ -66,39 +66,32 @@ export type AppDispatch = typeof store.dispatch;
 if (__DEV__) {
   let previousState: RootState;
   let monitoringTimeout: NodeJS.Timeout | null = null;
-  let pendingChanges = new Set<string>();
-  
-  // Actions to ignore (don't log these)
-  const ignoredActions = new Set([
-    'persist/PERSIST',
-    'persist/REHYDRATE',
-    'persist/PURGE',
-    'persist/REGISTER',
-    'persist/FLUSH',
-    'persist/PAUSE',
-    'persist/RESUME',
-  ]);
+  const pendingChanges = new Set<string>();
 
   // Deep comparison for meaningful changes
-  const hasSignificantChange = (prev: any, current: any, sliceName: string): boolean => {
+  const hasSignificantChange = (prev: unknown, current: unknown, sliceName: string): boolean => {
+    // Type assertions for proper comparison
+    const prevTyped = prev as Record<string, unknown>;
+    const currentTyped = current as Record<string, unknown>;
+    
     if (sliceName === 'user') {
       // Only log if user data actually changed, not just loading states
-      return prev?.user?.uid !== current?.user?.uid || 
-             prev?.user?.email !== current?.user?.email ||
-             prev?.isAuthenticated !== current?.isAuthenticated;
+      return prevTyped?.user?.uid !== currentTyped?.user?.uid || 
+             prevTyped?.user?.email !== currentTyped?.user?.email ||
+             prevTyped?.isAuthenticated !== currentTyped?.isAuthenticated;
     }
     
     if (sliceName === 'preferences') {
       // Only log if actual preferences changed, not just loading states
-      return prev?.favorites?.length !== current?.favorites?.length ||
-             prev?.watchlist?.length !== current?.watchlist?.length ||
-             prev?.lists?.length !== current?.lists?.length;
+      return (prevTyped?.favorites as unknown[])?.length !== (currentTyped?.favorites as unknown[])?.length ||
+             (prevTyped?.watchlist as unknown[])?.length !== (currentTyped?.watchlist as unknown[])?.length ||
+             (prevTyped?.lists as unknown[])?.length !== (currentTyped?.lists as unknown[])?.length;
     }
     
     if (sliceName === 'movies') {
       // Only log if movie data actually changed
-      return prev?.trendingMovies?.length !== current?.trendingMovies?.length ||
-             prev?.popularMovies?.length !== current?.popularMovies?.length;
+      return (prevTyped?.trendingMovies as unknown[])?.length !== (currentTyped?.trendingMovies as unknown[])?.length ||
+             (prevTyped?.popularMovies as unknown[])?.length !== (currentTyped?.popularMovies as unknown[])?.length;
     }
     
     // For other slices, use reference comparison
