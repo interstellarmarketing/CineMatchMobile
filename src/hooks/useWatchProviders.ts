@@ -36,8 +36,7 @@ const detectUserRegion = async (): Promise<string> => {
 // Function to fetch watch providers for a specific media
 const fetchWatchProviders = async (
   mediaType: 'movie' | 'tv',
-  mediaId: number,
-  region: string
+  mediaId: number
 ): Promise<WatchProvidersResponse> => {
   const url = `${BASE_URL}/${mediaType}/${mediaId}/watch/providers`;
   

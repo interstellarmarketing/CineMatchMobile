@@ -27,7 +27,6 @@ const StreamingProviderCard: React.FC<StreamingProviderCardProps> = React.memo((
       await redirectToStreamingService(provider.provider_name, title);
     } else {
       // For other services, open a Google search
-      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(title + ' ' + provider.provider_name)}`;
       // Note: You'll need to import Linking from react-native and use it here
       // For now, we'll just redirect to the streaming service
       await redirectToStreamingService(provider.provider_name, title);

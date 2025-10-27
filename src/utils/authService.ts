@@ -4,8 +4,6 @@ import {
   signOut,
   onAuthStateChanged,
   User as FirebaseUser,
-  GoogleAuthProvider,
-  signInWithCredential,
 } from 'firebase/auth';
 import { auth } from './firebase';
 
@@ -32,6 +30,7 @@ export class AuthService {
         email: user.email || '',
         displayName: displayName,
       };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       throw new Error(this.getErrorMessage(error.code));
     }
@@ -48,6 +47,7 @@ export class AuthService {
         email: user.email || '',
         displayName: user.displayName || '',
       };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       throw new Error(this.getErrorMessage(error.code));
     }
@@ -57,6 +57,7 @@ export class AuthService {
   static async signOut(): Promise<void> {
     try {
       await signOut(auth);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       throw new Error('Failed to sign out');
     }

@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { AuthService, AuthUser } from '../authService';
+import { AuthService } from '../authService';
 import { FirestoreService, UserPreferences } from '../firestoreService';
 import { User, UserState } from '../../types';
 

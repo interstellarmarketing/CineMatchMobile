@@ -6,7 +6,6 @@ import { FirestoreService } from '../utils/firestoreService';
 import { 
   addUser, 
   removeUser, 
-  loadUserPreferences, 
   updatePreferences 
 } from '../utils/slices/userSlice';
 import { setFavorites, setLists, setWatchlist } from '../utils/slices/preferencesSlice';

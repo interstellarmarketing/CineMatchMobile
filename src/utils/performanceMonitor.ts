@@ -196,6 +196,7 @@ export const performanceMonitor = new PerformanceMonitor();
 export const useNavigationPerformance = () => {
   const navigation = useNavigation();
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigateWithTracking = useCallback((routeName: string, params?: any) => {
     const currentRoute = navigation.getCurrentRoute()?.name || 'unknown';
     

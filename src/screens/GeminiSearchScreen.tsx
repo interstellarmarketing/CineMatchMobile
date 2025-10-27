@@ -147,11 +147,11 @@ const GeminiSearchScreen = () => {
       <Text style={styles.tipsTitle}>💡 Quick Tips</Text>
       <View style={styles.tipItem}>
         <Text style={styles.tipBullet}>•</Text>
-        <Text style={styles.tipText}>Describe what you want to watch"</Text>
+        <Text style={styles.tipText}>Describe what you want to watch</Text>
       </View>
       <View style={styles.tipItem}>
         <Text style={styles.tipBullet}>•</Text>
-        <Text style={styles.tipText}>Use references — "movies like Brokeback Mountain"</Text>
+        <Text style={styles.tipText}>Use references — &quot;movies like Brokeback Mountain&quot;</Text>
       </View>
       <View style={styles.tipItem}>
         <Text style={styles.tipBullet}>•</Text>
@@ -159,7 +159,7 @@ const GeminiSearchScreen = () => {
       </View>
       <View style={styles.tipItem}>
         <Text style={styles.tipBullet}>•</Text>
-        <Text style={styles.tipText}>"Shows similar to breaking bad"</Text>
+        <Text style={styles.tipText}>&quot;Shows similar to breaking bad&quot;</Text>
       </View>
     </View>
   );

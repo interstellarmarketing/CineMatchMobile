@@ -27,7 +27,9 @@ const fetchPopularMovies = async (): Promise<Movie[]> => {
   return data.results;
 };
 
-// Helper function to calculate recency boost
+// Helper function to calculate recency boost  
+// (currently unused but may be useful for future ranking features)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getRecencyBoost = (releaseDate: string | undefined): number => {
   if (!releaseDate) return 0;
   

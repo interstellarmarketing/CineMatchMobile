@@ -249,7 +249,8 @@ export const getProviderTypeLabel = (type: string): string => {
 };
 
 // Function to get provider price/quality (mocked, as TMDB API doesn't provide price info)
-export const getProviderPrice = (provider: any, type: string): string => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const getProviderPrice = (_provider: any, type: string): string => {
   if (type === 'cinema') return 'Ticket';
   if (type === 'rent') return '$19.99 4K';
   if (type === 'buy') return '$24.99 4K';
@@ -271,7 +272,8 @@ export interface StreamingProvider {
 
 // Mock function to get streaming options for a movie/show
 // In real implementation, this would call the TMDB watch providers API
-export const getStreamingOptions = async (movieId: number, mediaType: 'movie' | 'tv'): Promise<StreamingOption[]> => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const getStreamingOptions = async (_movieId: number, _mediaType: 'movie' | 'tv'): Promise<StreamingOption[]> => {
   // Mock implementation - in real app, this would fetch from TMDB API
   const mockOptions: StreamingOption[] = [
     { name: 'Netflix', type: 'subscription' },

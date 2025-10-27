@@ -1,19 +1,9 @@
 import {
   doc,
-  setDoc,
   getDoc,
   updateDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-  deleteDoc,
   onSnapshot,
   writeBatch,
-  enableNetwork,
-  disableNetwork,
-  arrayUnion,
-  arrayRemove,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import NetInfo from '@react-native-community/netinfo';

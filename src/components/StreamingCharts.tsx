@@ -119,7 +119,7 @@ const StreamingCharts: React.FC<StreamingChartsProps> = ({ onMoviePress }) => {
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Today's streaming charts</Text>
+        <Text style={styles.headerTitle}>Today&apos;s streaming charts</Text>
       </View>
 
       {/* Provider Filter */}

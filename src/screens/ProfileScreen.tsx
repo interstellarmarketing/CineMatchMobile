@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Image,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { shallowEqual } from 'react-redux';

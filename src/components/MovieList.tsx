@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import MovieCard from './MovieCard';

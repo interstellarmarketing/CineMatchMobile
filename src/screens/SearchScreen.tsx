@@ -1,10 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
-  FlatList,
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -19,7 +18,7 @@ import { Movie } from '../types';
 
 const SearchScreen = () => {
   const navigation = useNavigation();
-  const { searchResults, loading, error, updateQuery, clearSearch } = useSearchMovies();
+  const { searchResults, loading, error, updateQuery } = useSearchMovies();
 
   const handleSearch = useCallback((query: string) => {
     updateQuery(query);
